@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(MENTEE)
+  department    String?   // Khoa
+  major         String?   // Chuyên ngành
+  year          Int?      // Năm học (cho sinh viên)
+  bio           String?   // Giới thiệu
+  achievements  String[]  // Thành tích
+
+  // Mentor specific fields
+  mentorProfile       MentorProfile?
+  
+  // Connection relationships
+  // As a mentee
+  menteeConnections MenteeConnection[] @relation("AsMentee")
+  // As a mentor
+  mentorConnections MenteeConnection[] @relation("AsMentor")
+
+  // Social features
+  posts              Post[]
+  comments           Comment[]
+  reactions          Reaction[]
+
+  // Chat features
+  ownedServers       ChatServer[]       @relation("ServerOwner")
+  memberOfServers    ServerMember[]
+  messages           Message[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MentorProfile {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
+  rating        Float    @default(0)
+  totalReviews  Int     @default(0)
+  expertise     String[] // Các lĩnh vực chuyên môn
+  maxMentees    Int     @default(5)
+  availableDays String[] // Các ngày có thể dạy
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model MenteeConnection {
+  id        String   @id @default(cuid())
+  mentee    User     @relation("AsMentee", fields: [menteeId], references: [id])
+  menteeId  String
+  mentor    User     @relation("AsMentor", fields: [mentorId], references: [id])
+  mentorId  String
+  status    ConnectionStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([menteeId, mentorId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  content   String
+  images    String[]
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  comments  Comment[]
+  reactions Reaction[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reaction {
+  id        String       @id @default(cuid())
+  type      ReactionType
+  author    User         @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([authorId, postId])
+}
+
+// Chat Models
+model ChatServer {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  image       String?
+  owner       User          @relation("ServerOwner", fields: [ownerId], references: [id])
+  ownerId     String
+  members     ServerMember[]
+  channels    Channel[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ServerMember {
+  id         String     @id @default(cuid())
+  server     ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId   String
+  user       User       @relation(fields: [userId], references: [id])
+  userId     String
+  role       MemberRole @default(MEMBER)
+  
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([serverId, userId])
+}
+
+model Channel {
+  id          String     @id @default(cuid())
+  name        String
+  type        ChannelType
+  server      ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId    String
+  messages    Message[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([serverId, name])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  MENTOR
+  MENTEE
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ReactionType {
+  LIKE
+  HEART
+  HAHA
+  SAD
+  CONGRATS
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+  VIDEO
+  STREAMING
+}
