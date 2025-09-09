@@ -1,11 +1,110 @@
+'use client';
+
 import type { ExtendedPost } from '@/types/post';
+import { ReactionType } from '@prisma/client';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
+import { useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 interface PostCardProps {
   post: ExtendedPost;
 }
 
+const reactionEmojis = {
+  [ReactionType.LIKE]: { emoji: '👍', hoverColor: 'hover:text-blue-500' },
+  [ReactionType.HEART]: { emoji: '❤️', hoverColor: 'hover:text-red-500' },
+  [ReactionType.HAHA]: { emoji: '😄', hoverColor: 'hover:text-yellow-500' },
+  [ReactionType.SAD]: { emoji: '😢', hoverColor: 'hover:text-yellow-500' },
+  [ReactionType.CONGRATS]: { emoji: '🎉', hoverColor: 'hover:text-green-500' },
+};
+
 export default function PostCard({ post }: PostCardProps) {
+  const { data: session } = useSession();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comment, setComment] = useState('');
+  const [localPost, setLocalPost] = useState(post);
+
+  const handleReaction = async (type: ReactionType) => {
+    if (!session) {
+      toast.error('Please sign in to react to posts');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${post.id}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) throw new Error('Failed to react to post');
+
+      // Optimistically update the UI
+      const data = await response.json();
+      if (data.message === 'Reaction removed') {
+        setLocalPost(prev => ({
+          ...prev,
+          reactions: prev.reactions.filter(
+            r => !(r.userId === session.user.id && r.type === type)
+          ),
+        }));
+      } else {
+        const existingReactionIndex = localPost.reactions.findIndex(
+          r => r.userId === session.user.id
+        );
+
+        if (existingReactionIndex !== -1) {
+          setLocalPost(prev => ({
+            ...prev,
+            reactions: prev.reactions.map((r, i) =>
+              i === existingReactionIndex ? { ...r, type } : r
+            ),
+          }));
+        } else {
+          setLocalPost(prev => ({
+            ...prev,
+            reactions: [...prev.reactions, data],
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error handling reaction:', error);
+      toast.error('Failed to react to post');
+    }
+  };
+
+  const handleComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session) {
+      toast.error('Please sign in to comment');
+      return;
+    }
+    if (!comment.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/posts/${post.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: comment }),
+      });
+
+      if (!response.ok) throw new Error('Failed to post comment');
+
+      const newComment = await response.json();
+      setLocalPost(prev => ({
+        ...prev,
+        comments: [...prev.comments, newComment],
+      }));
+      setComment('');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast.error('Failed to post comment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-4">
       {/* Author Info */}
@@ -54,34 +153,35 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Reactions */}
       <div className="flex items-center gap-4 mb-4">
-        <button className="flex items-center gap-1 text-gray-500 hover:text-blue-500">
-          <span>👍</span>
-          <span>{post.reactions.filter(r => r.type === 'LIKE').length}</span>
-        </button>
-        <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
-          <span>❤️</span>
-          <span>{post.reactions.filter(r => r.type === 'HEART').length}</span>
-        </button>
-        <button className="flex items-center gap-1 text-gray-500 hover:text-yellow-500">
-          <span>😄</span>
-          <span>{post.reactions.filter(r => r.type === 'HAHA').length}</span>
-        </button>
-        <button className="flex items-center gap-1 text-gray-500 hover:text-yellow-500">
-          <span>😢</span>
-          <span>{post.reactions.filter(r => r.type === 'SAD').length}</span>
-        </button>
-        <button className="flex items-center gap-1 text-gray-500 hover:text-green-500">
-          <span>🎉</span>
-          <span>{post.reactions.filter(r => r.type === 'CONGRATS').length}</span>
-        </button>
+        {Object.entries(reactionEmojis).map(([type, { emoji, hoverColor }]) => {
+          const count = post.reactions.filter(r => r.type === type).length;
+          const hasReacted = post.reactions.some(
+            r => r.type === type && r.userId === session?.user?.id
+          );
+          
+          return (
+            <button
+              key={type}
+              onClick={() => handleReaction(type as ReactionType)}
+              className={`flex items-center gap-1 text-gray-500 ${hoverColor} 
+                ${hasReacted ? 'text-blue-500' : ''} transition-colors duration-200`}
+            >
+              <span className={`transform transition-transform duration-200 
+                ${hasReacted ? 'scale-125' : 'scale-100'}`}>
+                {emoji}
+              </span>
+              <span>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Comments */}
       <div className="border-t dark:border-gray-700 pt-4">
         <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-          Comments ({post.comments.length})
+          Comments ({localPost.comments.length})
         </h3>
-        {post.comments.map((comment) => (
+        {localPost.comments.map((comment) => (
           <div key={comment.id} className="flex gap-3 mb-3">
             {comment.author.image ? (
               <Image
@@ -109,16 +209,29 @@ export default function PostCard({ post }: PostCardProps) {
         ))}
         
         {/* Comment Input */}
-        <div className="mt-4">
+        <form onSubmit={handleComment} className="mt-4">
           <textarea
-            placeholder="Write a comment..."
-            className="w-full px-3 py-2 border rounded-lg dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={session ? "Write a comment..." : "Please sign in to comment"}
+            className="w-full px-3 py-2 border rounded-lg dark:border-gray-700 
+                     dark:bg-gray-900 dark:text-white focus:ring-2 
+                     focus:ring-blue-500 focus:border-transparent
+                     transition-all duration-200"
             rows={2}
+            disabled={!session || isSubmitting}
           />
-          <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-            Comment
+          <button
+            type="submit"
+            disabled={!session || isSubmitting || !comment.trim()}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg 
+                     hover:bg-blue-600 disabled:opacity-50 
+                     disabled:cursor-not-allowed transition-all duration-200
+                     transform hover:scale-105 active:scale-95"
+          >
+            {isSubmitting ? 'Posting...' : 'Comment'}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
