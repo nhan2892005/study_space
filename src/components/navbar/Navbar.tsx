@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { NAV_ITEMS, USER_MENU_ITEMS } from '@/constants/navigation';
 import { useTheme } from 'next-themes';
+import AuthButtons from '../auth/authButton';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -49,7 +50,9 @@ export default function Navbar() {
               🌐
             </button>
 
-            {session?.user && (
+            <AuthButtons/>
+
+            {/* {session?.user && (
               <Menu as="div" className="ml-3 relative">
                 <Menu.Button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                   <div className="flex items-center gap-2">
@@ -100,7 +103,7 @@ export default function Navbar() {
                   </Menu.Items>
                 </Transition>
               </Menu>
-            )}
+            )} */}
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { UserRole } from "@/types/user";
 
 export const ROUTES = {
   HOME: '/',
+  GROUP: '/group',
   PROFILE: '/profile',
   CALENDAR: '/calendar',
   STORAGE: '/storage',
@@ -30,6 +31,11 @@ export const NAV_ITEMS: NavigationItem[] = [
   {
     label: 'Home',
     href: ROUTES.HOME,
+    roles: ['mentee', 'mentor', 'admin'],
+  },
+  {
+    label: 'My Groups',
+    href: ROUTES.GROUP,
     roles: ['mentee', 'mentor', 'admin'],
   },
   {

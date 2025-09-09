@@ -10,7 +10,7 @@ const mockMessages = [
     content: 'Hello everyone! Welcome to CS101 study group!',
     author: {
       name: 'John Doe',
-      image: 'https://api.dicebear.com/7.x/avatars/svg?seed=1',
+      image: 'https://api.dicebear.com/9.x/pixel-art/png?seed=John',
     },
     timestamp: new Date('2025-09-08T10:00:00Z'),
   },
@@ -19,7 +19,7 @@ const mockMessages = [
     content: 'Thanks! Quick question about the upcoming assignment...',
     author: {
       name: 'Jane Smith',
-      image: 'https://api.dicebear.com/7.x/avatars/svg?seed=2',
+      image: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Jane',
     },
     timestamp: new Date('2025-09-08T10:05:00Z'),
   },
