@@ -92,10 +92,10 @@ export default async function Home({
         <section className="max-w-3xl mx-auto">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              News Feed
+              Bảng tin
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Stay updated with the latest posts from our community
+              Kết nối với cộng đồng học tập của chúng ta
             </p>
           </div>
 

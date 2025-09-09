@@ -6,4 +6,5 @@ export interface ExtendedPost extends Omit<Post, 'authorId'> {
     author: Pick<User, 'id' | 'name' | 'image'>;
   }>;
   reactions: Reaction[];
+  images: string[];
 }

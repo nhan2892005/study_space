@@ -13,41 +13,9 @@ export async function POST(request: Request) {
 
     const contentType = request.headers.get("content-type") || "";
 
-    // parse body: support application/json or multipart/form-data
-    let content = "";
-    let imagesUrls: string[] = [];
-
-    if (contentType.includes("application/json")) {
-      const body = await request.json();
-      content = (body.content ?? "").toString();
-      // if you want title, pick from body.title
-    } else if (contentType.includes("multipart/form-data")) {
-      // request.formData() works in Next.js route handlers
-      const formData = await request.formData();
-      content = formData.get("content")?.toString() ?? "";
-
-      // get uploaded files (may be File/Blob objects)
-      const files = formData.getAll("images") as any[]; // items could be File
-      // NOTE: here we do NOT upload files — you should upload to S3/Cloudinary and get URLs
-      // For now, we leave imagesUrls empty or implement an uploader here.
-      for (const f of files) {
-        if (f && typeof f === "object" && typeof (f as any).arrayBuffer === "function") {
-          // Example: convert to buffer (if you want to process/upload)
-          const arrayBuffer = await (f as any).arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          // TODO: upload `buffer` to cloud storage and push returned URL into imagesUrls
-          // imagesUrls.push(uploadedUrl);
-        }
-      }
-    } else {
-      // fallback: try json parse (to produce nice error)
-      try {
-        const body = await request.json();
-        content = (body.content ?? "").toString();
-      } catch (e) {
-        return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
-      }
-    }
+    const body = await request.json();
+    const content = (body.content ?? "").toString();
+    const imagesUrls = Array.isArray(body.images) ? body.images : [];
 
     if (!content.trim()) {
       return NextResponse.json({ error: "Missing content" }, { status: 400 });

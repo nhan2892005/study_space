@@ -40,13 +40,35 @@ export default function CreatePost() {
 
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("content", content);
-      images.forEach((image) => formData.append("images", image));
+      // First, upload images to Cloudinary
+      let imageUrls: string[] = [];
+      if (images.length > 0) {
+        const formData = new FormData();
+        images.forEach((image) => formData.append("images", image));
 
+        const uploadResponse = await fetch("/api/uploads/cloudinary", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload images");
+        }
+
+        const uploadResult = await uploadResponse.json();
+        imageUrls = uploadResult.urls;
+      }
+
+      // Then create the post with image URLs
       const response = await fetch("/api/posts", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          images: imageUrls,
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to create post");

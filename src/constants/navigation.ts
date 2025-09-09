@@ -29,39 +29,14 @@ interface NavigationItem {
 
 export const NAV_ITEMS: NavigationItem[] = [
   {
-    label: 'Home',
+    label: 'Trang chủ',
     href: ROUTES.HOME,
     roles: ['mentee', 'mentor', 'admin'],
   },
   {
-    label: 'My Groups',
+    label: 'Nhóm học tập của tôi',
     href: ROUTES.GROUP,
     roles: ['mentee', 'mentor', 'admin'],
-  },
-  {
-    label: 'Find Mentors',
-    href: ROUTES.FIND_MENTORS,
-    roles: ['mentee'],
-  },
-  {
-    label: 'My Mentees',
-    href: ROUTES.MY_MENTEES,
-    roles: ['mentor'],
-  },
-  {
-    label: 'Blog',
-    href: ROUTES.BLOG,
-    roles: ['mentee', 'mentor', 'admin'],
-  },
-  {
-    label: 'Community',
-    href: ROUTES.COMMUNITY,
-    roles: ['mentee', 'mentor', 'admin'],
-  },
-  {
-    label: 'Admin Dashboard',
-    href: ROUTES.ADMIN,
-    roles: ['admin'],
   },
 ];
 

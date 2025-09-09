@@ -136,16 +136,21 @@ export default function PostCard({ post }: PostCardProps) {
           {post.content}
         </p>
         {post.images && post.images.length > 0 && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className={`mt-4 grid ${
+            post.images.length === 1 ? 'grid-cols-1' : 
+            post.images.length === 2 ? 'grid-cols-2' : 
+            'grid-cols-2 sm:grid-cols-3'
+          } gap-2`}>
             {post.images.map((image, index) => (
-              <Image
-                key={index}
-                src={image}
-                alt="Post image"
-                width={300}
-                height={200}
-                className="rounded-lg object-cover"
-              />
+              <div key={index} className="relative group aspect-w-16 aspect-h-9">
+                <Image
+                  src={image}
+                  alt={`Post image ${index + 1}`}
+                  fill
+                  className="rounded-lg object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-200 rounded-lg"></div>
+              </div>
             ))}
           </div>
         )}
