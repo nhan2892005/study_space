@@ -26,7 +26,7 @@ export const mockMentors: Mentor[] = [
   {
     id: '1',
     name: 'Dr. Nguyen Van A',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
+    avatar: 'https://api.dicebear.com/9.x/avataaars/png?seed=1',
     role: 'lecturer',
     department: 'Computer Science',
     currentMentees: 3,
@@ -62,7 +62,7 @@ export const mockMentors: Mentor[] = [
   {
     id: '2',
     name: 'Tran Thi B',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=2',
     role: 'student',
     year: 4,
     department: 'Computer Science',

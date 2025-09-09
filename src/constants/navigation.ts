@@ -3,8 +3,6 @@ import { UserRole } from "@/types/user";
 export const ROUTES = {
   HOME: '/',
   GROUP: '/group',
-  PROFILE: '/profile',
-  CALENDAR: '/calendar',
   STORAGE: '/storage',
   MENTOR_DETAIL: '/mentor',
   BLOG: '/blog',
