@@ -20,72 +20,87 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
   callbacks: {
-    async signIn({ profile, account }) {
+    async signIn({ profile }) {
       const userEmail = (profile as any)?.email;
 
-      if (!userEmail) return false;
-
-      // Kiểm tra domain
-      const allowedDomain = "hcmut.edu.vn";
-      const domain = userEmail.split("@")[1]?.toLowerCase();
-      if (domain !== allowedDomain) {
+      if (!userEmail) {
         return false;
       }
 
-      // Get role from URL query parameter
-      let roleFromUrl: UserRole | null = null;
-      if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
-        const url = new URL(account.redirect_uri);
-        const role = url.searchParams.get("role");
-        if (role === "MENTOR" || role === "MENTEE" || role === "ADMIN") {
-          roleFromUrl = role;
-        }
+      // Kiểm tra domain
+      const allowedDomains = ["hcmut.edu.vn", "gmail.com"];
+
+      const domain = userEmail.split("@")[1]?.toLowerCase();
+
+      if (!allowedDomains.includes(domain)) {
+        return false;
       }
-      
+
       try {
-        // Tìm hoặc tạo user trong database
+        // Check if user exists, if not create new user
         const user = await prisma.user.upsert({
           where: { email: userEmail },
-          update: {
-            name: profile?.name || null,
-            image: (profile as any)?.picture || null,
-            emailVerified: new Date(),
-          },
+          update: {},
           create: {
             email: userEmail,
-            name: profile?.name || null,
-            image: (profile as any)?.picture || null,
-            role: roleFromUrl || "MENTEE", // Default to MENTEE if no role specified
-            emailVerified: new Date(),
+            name: (profile as any).name || 'Unknown User',
+            image: (profile as any).image,
+            role: "MENTEE", // Default role
           },
         });
-
         return true;
       } catch (error) {
         console.error("Error during sign in:", error);
         return false;
       }
+      // if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
+      //   const url = new URL(account.redirect_uri);
+      //   const role = url.searchParams.get("role");
+      //   if (role === "MENTOR" || role === "MENTEE" || role === "ADMIN") {
+      //     roleFromUrl = role;
+      //   }
+      // }
+      
+      // try {
+      //   // Tìm hoặc tạo user trong database
+      //   const user = await prisma.user.upsert({
+      //     where: { email: userEmail },
+      //     update: {
+      //       name: profile?.name || null,
+      //       image: (profile as any)?.picture || null,
+      //       emailVerified: new Date(),
+      //     },
+      //     create: {
+      //       email: userEmail,
+      //       name: profile?.name || null,
+      //       image: (profile as any)?.picture || null,
+      //       role: roleFromUrl || "MENTEE", // Default to MENTEE if no role specified
+      //       emailVerified: new Date(),
+      //     },
+      //   });
+
+      //   return true;
+      // } catch (error) {
+      //   console.error("Error during sign in:", error);
+      //   return false;
+      // }
     },
-    async jwt({ token, trigger, session }) {
-      if (trigger === "update" && session?.role) {
-        // Allow role updates through session
-        token.role = session.role;
-      }
-
-      if (!token.role) {
-        // Get user role from database
+    async jwt({ token }) {
+      if (token.email) {
+        // Fetch user from database and add role to token
         const user = await prisma.user.findUnique({
-          where: { email: token.email! },
-          select: { role: true },
+          where: { email: token.email },
+          select: { role: true }
         });
-        token.role = user?.role;
+        if (user) {
+          token.role = user.role;
+        }
       }
-
       return token;
     },
     async session({ session, token }) {
-      if (token.role) {
-        (session as any).user.role = token.role;
+      if (token && session.user) {
+        session.user.role = token.role as string;
       }
       return session;
     },

@@ -75,42 +75,38 @@ model MenteeConnection {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  content   String
-  images    String[]
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  comments  Comment[]
-  reactions Reaction[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(cuid())
+  content     String      @db.Text
+  images      String[]    // URLs of uploaded images
+  published   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  author      User        @relation(fields: [authorId], references: [id])
+  authorId    String
+  comments    Comment[]
+  reactions   Reaction[]
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   content   String
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author    User        @relation(fields: [authorId], references: [id])
+  authorId  String
 }
 
 model Reaction {
-  id        String       @id @default(cuid())
+  id        String      @id @default(cuid())
   type      ReactionType
-  author    User         @relation(fields: [authorId], references: [id])
-  authorId  String
-  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
-  
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  user      User        @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime    @default(now())
 
-  @@unique([authorId, postId])
+  @@unique([postId, userId])
 }
 
 // Chat Models

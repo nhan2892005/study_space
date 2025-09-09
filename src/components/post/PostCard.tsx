@@ -1,8 +1,8 @@
-import { Post } from '@/types/user';
+import type { ExtendedPost } from '@/types/post';
 import Image from 'next/image';
 
 interface PostCardProps {
-  post: Post;
+  post: ExtendedPost;
 }
 
 export default function PostCard({ post }: PostCardProps) {
@@ -13,7 +13,7 @@ export default function PostCard({ post }: PostCardProps) {
         {post.author.image ? (
           <Image
             src={post.author.image}
-            alt={post.author.name}
+            alt={post.author.name || 'User'}
             width={40}
             height={40}
             className="rounded-full"
@@ -56,23 +56,23 @@ export default function PostCard({ post }: PostCardProps) {
       <div className="flex items-center gap-4 mb-4">
         <button className="flex items-center gap-1 text-gray-500 hover:text-blue-500">
           <span>👍</span>
-          <span>{post.reactions.like}</span>
+          <span>{post.reactions.filter(r => r.type === 'LIKE').length}</span>
         </button>
         <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
           <span>❤️</span>
-          <span>{post.reactions.heart}</span>
+          <span>{post.reactions.filter(r => r.type === 'HEART').length}</span>
         </button>
         <button className="flex items-center gap-1 text-gray-500 hover:text-yellow-500">
           <span>😄</span>
-          <span>{post.reactions.haha}</span>
+          <span>{post.reactions.filter(r => r.type === 'HAHA').length}</span>
         </button>
         <button className="flex items-center gap-1 text-gray-500 hover:text-yellow-500">
           <span>😢</span>
-          <span>{post.reactions.sad}</span>
+          <span>{post.reactions.filter(r => r.type === 'SAD').length}</span>
         </button>
         <button className="flex items-center gap-1 text-gray-500 hover:text-green-500">
           <span>🎉</span>
-          <span>{post.reactions.congrats}</span>
+          <span>{post.reactions.filter(r => r.type === 'CONGRATS').length}</span>
         </button>
       </div>
 
@@ -86,7 +86,7 @@ export default function PostCard({ post }: PostCardProps) {
             {comment.author.image ? (
               <Image
                 src={comment.author.image}
-                alt={comment.author.name}
+                alt={comment.author.name || 'User'}
                 width={32}
                 height={32}
                 className="rounded-full"

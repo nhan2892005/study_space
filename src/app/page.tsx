@@ -1,15 +1,68 @@
 import { mockMentors } from "@/data/mentors";
-import { mockPosts } from "@/data/posts";
 import MentorCard from "@/components/mentor/MentorCard";
 import PostCard from "@/components/post/PostCard";
+import CreatePost from "@/components/post/CreatePost";
+import Pagination from "@/components/post/Pagination";
 import Navbar from "@/components/navbar/Navbar";
 import Image from "next/image";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "./api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import type { ExtendedPost } from "@/types/post";
 
-export default function Home() {
-  const session =  getServerSession(authOptions);
-  const userRole = (session?.user as any)?.role || 'guest';
+async function getPosts(page: number = 1, limit: number = 5) {
+  const skip = (page - 1) * limit;
+  
+  const [posts, total] = await Promise.all([
+    prisma.post.findMany({
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            role: true
+          }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true
+              }
+            }
+          }
+        },
+        reactions: true
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit
+    }),
+    prisma.post.count()
+  ]);
+
+  return {
+    posts: posts as ExtendedPost[],
+    pagination: {
+      total,
+      pages: Math.ceil(total / limit),
+      current: page
+    }
+  };
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const session = await getServerSession(authOptions);
+  const userRole = session?.user?.role || 'guest';
+  const page = Number(searchParams['page']) || 1;
+  const { posts, pagination } = await getPosts(page);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -36,7 +89,7 @@ export default function Home() {
         )}
 
         {/* News Feed */}
-        <section>
+        <section className="max-w-3xl mx-auto">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               News Feed
@@ -46,11 +99,18 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto">
-            {mockPosts.map((post) => (
+          {/* Create Post Section */}
+          <CreatePost />
+
+          {/* Posts List */}
+          <div className="space-y-6">
+            {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
           </div>
+
+          {/* Pagination */}
+          <Pagination {...pagination} />
         </section>
       </main>
 
