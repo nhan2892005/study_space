@@ -1,20 +1,49 @@
-"use client";
+'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import CreateServerModal from './CreateServerModal';
 
-// Temporary mock data - will be replaced with real data from API
-const mockServers = [
-  { id: '1', name: 'CS101', image: '/server-icons/cs101.png' },
-  { id: '2', name: 'Math Group', image: '/server-icons/math.png' },
-  { id: '3', name: 'Physics Lab', image: '/server-icons/physics.png' },
-];
+interface Server {
+  id: string;
+  name: string;
+  image?: string | null;
+  description?: string;
+}
 
 export default function ChatSidebar() {
   const pathname = usePathname();
-  const [activeServer, setActiveServer] = useState('1');
+  const router = useRouter();
+  const [servers, setServers] = useState<Server[]>([]);
+  const [activeServer, setActiveServer] = useState<string>();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchServers = async () => {
+      try {
+        const response = await fetch('/api/servers');
+        if (!response.ok) throw new Error('Failed to fetch servers');
+        const data = await response.json();
+        setServers(data);
+      } catch (error) {
+        console.error('Error fetching servers:', error);
+        toast.error('Failed to load servers');
+      }
+    };
+
+    fetchServers();
+  }, []);
+
+  const handleServerClick = (serverId: string) => {
+    setActiveServer(serverId);
+    router.push(`/group/${serverId}`);
+  };
+
+  const defaultServerIcon = (serverName: string) => 
+    `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(serverName)}`;
 
   return (
     <div className="w-20 h-screen bg-gray-800 dark:bg-gray-900 flex flex-col items-center py-4 gap-4">
@@ -31,11 +60,12 @@ export default function ChatSidebar() {
       <div className="w-12 h-[2px] bg-gray-700 rounded-full mx-auto" />
 
       {/* Server List */}
-      <div className="flex flex-col gap-4">
-        {mockServers.map((server) => (
+      <div className="flex flex-col gap-4 overflow-y-auto scrollbar-hide">
+        {servers.map((server) => (
           <button
             key={server.id}
-            onClick={() => setActiveServer(server.id)}
+            onClick={() => handleServerClick(server.id)}
+            title={server.name}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all transform hover:scale-110 ${
               activeServer === server.id
                 ? 'bg-blue-600'
@@ -43,7 +73,7 @@ export default function ChatSidebar() {
             }`}
           >
             <Image
-              src={server.image}
+              src={server.image || defaultServerIcon(server.name)}
               alt={server.name}
               width={32}
               height={32}
@@ -53,7 +83,10 @@ export default function ChatSidebar() {
         ))}
 
         {/* Add Server Button */}
-        <button className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-700 hover:bg-green-600 transition-colors">
+        <button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-700 hover:bg-green-600 transition-colors"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 text-white"
@@ -70,6 +103,11 @@ export default function ChatSidebar() {
           </svg>
         </button>
       </div>
+
+      <CreateServerModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </div>
   );
 }

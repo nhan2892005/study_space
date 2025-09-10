@@ -102,7 +102,7 @@ export default async function Home({
           </section>
 
           {/* Right sidebar: Recommended mentors (sticky on large screens) */}
-          <aside className="lg:col-span-1">
+          {/* <aside className="lg:col-span-1">
             {userRole.toString().toLowerCase() === 'mentee' && (
               <div className="relative">
                 <div className="sticky top-20">
@@ -123,7 +123,7 @@ export default async function Home({
                 </div>
               </div>
             )}
-          </aside>
+          </aside> */}
         </div>
       </main>
 

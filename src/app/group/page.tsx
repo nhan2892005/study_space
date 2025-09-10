@@ -10,9 +10,6 @@ export default function GroupPage() {
 
       {/* Channel List Sidebar */}
       <ChannelSidebar />
-
-      {/* Main Chat Area */}
-      <ChatArea />
     </div>
   );
 }

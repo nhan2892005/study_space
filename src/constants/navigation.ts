@@ -4,12 +4,9 @@ export const ROUTES = {
   HOME: '/',
   GROUP: '/group',
   STORAGE: '/storage',
-  MENTOR_DETAIL: '/mentor',
-  BLOG: '/blog',
-  FIND_MENTORS: '/find-mentors',
+  MENTORS: '/mentor',
   MY_MENTEES: '/my-mentees',
-  COMMUNITY: '/community',
-  ADMIN: '/admin',
+  DASHBOARD: '/dashboard',
   SETTINGS: {
     PROFILE: '/settings/profile',
     SCHEDULE: '/settings/schedule',
@@ -34,6 +31,26 @@ export const NAV_ITEMS: NavigationItem[] = [
   {
     label: 'Nhóm học tập của tôi',
     href: ROUTES.GROUP,
+    roles: ['mentee', 'mentor'],
+  },
+  {
+    label: 'Kho lưu trữ',
+    href: ROUTES.STORAGE,
+    roles: ['mentee', 'mentor'],
+  },
+  {
+    label: 'Danh sách mentee của tôi',
+    href: ROUTES.MY_MENTEES,
+    roles: ['mentor'],
+  },
+  {
+    label: 'Mentor của tôi',
+    href: ROUTES.MENTORS,
+    roles: ['mentee'],
+  },
+  {
+    label: 'Bảng điều khiển',
+    href: ROUTES.DASHBOARD,
     roles: ['mentee', 'mentor', 'admin'],
   },
 ];

@@ -17,15 +17,15 @@ model User {
   emailVerified DateTime?
   image         String?
   role          UserRole  @default(MENTEE)
-  department    String?   // Khoa
-  major         String?   // Chuyên ngành
-  year          Int?      // Năm học (cho sinh viên)
-  bio           String?   // Giới thiệu
-  achievements  String[]  // Thành tích
+  department    String? // Khoa
+  major         String? // Chuyên ngành
+  year          Int? // Năm học (cho sinh viên)
+  bio           String? // Giới thiệu
+  achievements  String[] // Thành tích
 
   // Mentor specific fields
-  mentorProfile       MentorProfile?
-  
+  mentorProfile MentorProfile?
+
   // Connection relationships
   // As a mentee
   menteeConnections MenteeConnection[] @relation("AsMentee")
@@ -33,15 +33,20 @@ model User {
   mentorConnections MenteeConnection[] @relation("AsMentor")
 
   // Social features
-  posts              Post[]
-  comments           Comment[]
-  reactions          Reaction[]
+  posts     Post[]
+  comments  Comment[]
+  reactions Reaction[]
 
   // Chat features
-  ownedServers       ChatServer[]       @relation("ServerOwner")
-  memberOfServers    ServerMember[]
-  messages           Message[]
-  
+  ownedServers    ChatServer[]   @relation("ServerOwner")
+  memberOfServers ServerMember[]
+  messages        Message[]
+  // Server invitations
+  receivedInvitations ServerInvitation[] @relation("InvitedUser")
+  sentInvitations     ServerInvitation[] @relation("InvitedBy")
+
+  recordings Recording[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -51,23 +56,23 @@ model MentorProfile {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String   @unique
   rating        Float    @default(0)
-  totalReviews  Int     @default(0)
+  totalReviews  Int      @default(0)
   expertise     String[] // Các lĩnh vực chuyên môn
-  maxMentees    Int     @default(5)
+  maxMentees    Int      @default(5)
   availableDays String[] // Các ngày có thể dạy
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MenteeConnection {
-  id        String   @id @default(cuid())
-  mentee    User     @relation("AsMentee", fields: [menteeId], references: [id])
-  menteeId  String
-  mentor    User     @relation("AsMentor", fields: [mentorId], references: [id])
-  mentorId  String
-  status    ConnectionStatus @default(PENDING)
-  
+  id       String           @id @default(cuid())
+  mentee   User             @relation("AsMentee", fields: [menteeId], references: [id])
+  menteeId String
+  mentor   User             @relation("AsMentor", fields: [mentorId], references: [id])
+  mentorId String
+  status   ConnectionStatus @default(PENDING)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -75,93 +80,160 @@ model MenteeConnection {
 }
 
 model Post {
-  id          String      @id @default(cuid())
-  content     String      @db.Text
-  images      String[]    // URLs of uploaded images
-  published   Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  author      User        @relation(fields: [authorId], references: [id])
-  authorId    String
-  comments    Comment[]
-  reactions   Reaction[]
+  id        String     @id @default(cuid())
+  content   String     @db.Text
+  images    String[] // URLs of uploaded images
+  published Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  author    User       @relation(fields: [authorId], references: [id])
+  authorId  String
+  comments  Comment[]
+  reactions Reaction[]
 }
 
 model Comment {
-  id        String      @id @default(cuid())
+  id        String   @id @default(cuid())
   content   String
-  createdAt DateTime    @default(now())
-  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
-  author    User        @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id])
   authorId  String
 }
 
 model Reaction {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   type      ReactionType
-  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
-  user      User        @relation(fields: [userId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
   userId    String
-  createdAt DateTime    @default(now())
+  createdAt DateTime     @default(now())
 
   @@unique([postId, userId])
 }
 
 // Chat Models
 model ChatServer {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
   description String?
   image       String?
-  owner       User          @relation("ServerOwner", fields: [ownerId], references: [id])
+  owner       User           @relation("ServerOwner", fields: [ownerId], references: [id])
   ownerId     String
   members     ServerMember[]
   channels    Channel[]
+  invitations ServerInvitation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServerInvitation {
+  id        String     @id @default(cuid())
+  server    ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId  String
   
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  invitedUser   User   @relation("InvitedUser", fields: [invitedUserId], references: [id])
+  invitedUserId String
+  
+  invitedBy   User   @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedById String
+  
+  status    InvitationStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([serverId])
+  @@index([invitedUserId])
+  @@unique([serverId, invitedUserId])
 }
 
 model ServerMember {
-  id         String     @id @default(cuid())
-  server     ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  serverId   String
-  user       User       @relation(fields: [userId], references: [id])
-  userId     String
-  role       MemberRole @default(MEMBER)
-  
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id       String     @id @default(cuid())
+  server   ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId String
+  user     User       @relation(fields: [userId], references: [id])
+  userId   String
+  role     MemberRole @default(MEMBER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([serverId, userId])
 }
 
 model Channel {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   type        ChannelType
-  server      ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  description String?
+  server      ChatServer  @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId    String
   messages    Message[]
-  
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  recordings  Recording[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([serverId, name])
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  content   String
-  author    User     @relation(fields: [authorId], references: [id])
+  id        String      @id @default(cuid())
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  author    User        @relation(fields: [authorId], references: [id])
   authorId  String
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel   Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
   channelId String
-  
+  files     File[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model File {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  type      FileType
+  size      Int
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Recording {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  duration    Int // Duration in seconds
+  thumbnail   String?
+  channel     Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String
+  recorder    User    @relation(fields: [recorderId], references: [id])
+  recorderId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  SYSTEM
+}
+
+enum FileType {
+  IMAGE
+  DOCUMENT
+  VIDEO
+  AUDIO
 }
 
 enum UserRole {
@@ -195,4 +267,10 @@ enum ChannelType {
   VOICE
   VIDEO
   STREAMING
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }
