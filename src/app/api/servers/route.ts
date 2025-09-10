@@ -84,13 +84,24 @@ export async function GET() {
 
     const servers = await prisma.chatServer.findMany({
       where: {
-        members: {
-          some: {
-            user: {
-              email: session.user.email,
+        OR: [
+          // Servers where user is a member
+          {
+            members: {
+              some: {
+                user: {
+                  email: session.user.email,
+                },
+              },
             },
           },
-        },
+          // Servers where user is the owner
+          {
+            owner: {
+              email: session.user.email,
+            },
+          }
+        ]
       },
       include: {
         owner: {
@@ -100,6 +111,18 @@ export async function GET() {
             image: true,
           },
         },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                role: true,
+              },
+            },
+          },
+        },
         channels: true,
         _count: {
           select: {
@@ -107,6 +130,9 @@ export async function GET() {
           },
         },
       },
+      orderBy: {
+        updatedAt: 'desc'
+      }
     });
 
     return NextResponse.json(servers);

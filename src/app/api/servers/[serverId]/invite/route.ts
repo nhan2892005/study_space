@@ -61,12 +61,24 @@ export async function POST(
       );
     }
 
+    // Get the inviter's user record
+    const inviter = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!inviter) {
+      return NextResponse.json(
+        { error: "Inviter not found" },
+        { status: 404 }
+      );
+    }
+
     // Create invitation
     const invitation = await prisma.serverInvitation.create({
       data: {
         server: { connect: { id: serverId } },
         invitedUser: { connect: { id: invitedUser.id } },
-        invitedBy: { connect: { id: session.user.email } },
+        invitedBy: { connect: { id: inviter.id } },
       },
       include: {
         server: true,
@@ -79,15 +91,7 @@ export async function POST(
       },
     });
 
-    // Emit socket event for real-time notification
-    const io = global.io;
-    if (io) {
-      io.to(`user:${invitedUser.id}`).emit('server-invitation', {
-        invitation,
-        serverName: inviterMember.server.name,
-        invitedByName: session.user.name,
-      });
-    }
+    // No need for socket events anymore as we're using polling
 
     return NextResponse.json({ message: "Invitation sent successfully" });
   } catch (error) {

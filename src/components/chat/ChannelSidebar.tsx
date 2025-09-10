@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import CreateChannelModal from '@/components/chat/CreateChannelModal';
+import { useServer } from '@/contexts/ServerContext';
 
 type ChannelType = 'TEXT' | 'VOICE' | 'VIDEO' | 'STREAMING';
 
@@ -21,66 +22,65 @@ interface ChannelsByType {
   STREAMING: Channel[];
 }
 
-export default function ChannelSidebar() {
-  const params = useParams();
+interface Props {
+  serverId: string;
+}
+
+export default function ChannelSidebar({ serverId }: Props) {
   const router = useRouter();
-  const [channels, setChannels] = useState<ChannelsByType>({
+  const { 
+    activeServer, 
+    channels, 
+    activeChannel, 
+    setActiveChannel, 
+    loadChannels 
+  } = useServer();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [groupedChannels, setGroupedChannels] = useState<ChannelsByType>({
     TEXT: [],
     VOICE: [],
     VIDEO: [],
     STREAMING: [],
   });
-  const [activeChannel, setActiveChannel] = useState<string>();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [serverName, setServerName] = useState('');
 
+  // Load channels if not already loaded
   useEffect(() => {
-    if (!params.serverId) return;
+    if (!channels[serverId]) {
+      loadChannels(serverId);
+    }
+  }, [serverId, channels, loadChannels]);
 
-    const fetchChannels = async () => {
-      try {
-        const response = await fetch(`/api/servers/${params.serverId}/channels`);
-        if (!response.ok) throw new Error('Failed to fetch channels');
-        
-        const channelsData: Channel[] = await response.json();
-        
-        // Group channels by type
-        const grouped = channelsData.reduce((acc, channel) => {
-          acc[channel.type].push(channel);
-          return acc;
-        }, {
-          TEXT: [],
-          VOICE: [],
-          VIDEO: [],
-          STREAMING: [],
-        } as ChannelsByType);
+  // Group channels by type whenever channels change
+  useEffect(() => {
+    if (channels[serverId]) {
+      const grouped = channels[serverId].reduce((acc, channel) => {
+        acc[channel.type].push(channel);
+        return acc;
+      }, {
+        TEXT: [],
+        VOICE: [],
+        VIDEO: [],
+        STREAMING: [],
+      } as ChannelsByType);
 
-        setChannels(grouped);
-      } catch (error) {
-        console.error('Error fetching channels:', error);
-        toast.error('Failed to load channels');
+      setGroupedChannels(grouped);
+      
+      // If we have channels and no active channel, select the first text channel by default
+      if (grouped.TEXT.length > 0 && !activeChannel) {
+        setActiveChannel(grouped.TEXT[0]);
+        router.push(`/group/${serverId}/${grouped.TEXT[0].id}`);
       }
-    };
+    }
+  }, [serverId, channels, activeChannel, setActiveChannel, router]);
 
-    const fetchServer = async () => {
-      try {
-        const response = await fetch(`/api/servers/${params.serverId}`);
-        if (!response.ok) throw new Error('Failed to fetch server');
-        
-        const serverData = await response.json();
-        setServerName(serverData.name);
-      } catch (error) {
-        console.error('Error fetching server:', error);
-      }
-    };
-
-    fetchChannels();
-    fetchServer();
-  }, [params.serverId]);
+  const handleChannelClick = (channel: Channel) => {
+    setActiveChannel(channel);
+    router.push(`/group/${serverId}/${channel.id}`);
+  };
 
   const handleCreateChannel = async (data: { name: string; type: ChannelType; description?: string }) => {
     try {
-      const response = await fetch(`/api/servers/${params.serverId}/channels`, {
+      const response = await fetch(`/api/servers/${serverId}/channels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -89,12 +89,13 @@ export default function ChannelSidebar() {
       if (!response.ok) throw new Error('Failed to create channel');
 
       const newChannel: Channel = await response.json();
-      const channelType = newChannel.type as keyof ChannelsByType;
-      setChannels(prev => ({
-        ...prev,
-        [channelType]: [...prev[channelType], newChannel],
-      }));
-
+      
+      // Reload channels after creating new one
+      await loadChannels(serverId);
+      
+      // Set the new channel as active
+      setActiveChannel(newChannel);
+      router.push(`/group/${serverId}/${newChannel.id}`);
       toast.success('Channel created successfully');
     } catch (error) {
       console.error('Error creating channel:', error);
@@ -106,7 +107,7 @@ export default function ChannelSidebar() {
     <div className="w-64 h-screen bg-gray-700 dark:bg-gray-800">
       {/* Server Header */}
       <div className="h-12 border-b border-gray-600 flex items-center justify-between px-4">
-        <h2 className="text-white font-semibold truncate">{serverName}</h2>
+        <h2 className="text-white font-semibold truncate">{activeServer?.name}</h2>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="text-gray-400 hover:text-white"
@@ -120,18 +121,15 @@ export default function ChannelSidebar() {
       {/* Channel List */}
       <div className="p-4">
         {/* Text Channels */}
-        {channels.TEXT.length > 0 && (
+        {groupedChannels.TEXT.length > 0 && (
           <div className="mb-4">
             <h3 className="text-gray-400 text-sm font-medium mb-2">TEXT CHANNELS</h3>
-            {channels.TEXT.map((channel) => (
+            {groupedChannels.TEXT.map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => {
-                  setActiveChannel(channel.id);
-                  router.push(`/group/${params.serverId}/${channel.id}`);
-                }}
+                onClick={() => handleChannelClick(channel)}
                 className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 ${
-                  activeChannel === channel.id
+                  activeChannel?.id === channel.id
                     ? 'bg-gray-600 text-white'
                     : 'text-gray-400 hover:bg-gray-600 hover:text-gray-200'
                 }`}
@@ -143,18 +141,15 @@ export default function ChannelSidebar() {
         )}
 
         {/* Voice Channels */}
-        {channels.VOICE.length > 0 && (
+        {groupedChannels.VOICE.length > 0 && (
           <div className="mb-4">
             <h3 className="text-gray-400 text-sm font-medium mb-2">VOICE CHANNELS</h3>
-            {channels.VOICE.map((channel) => (
+            {groupedChannels.VOICE.map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => {
-                  setActiveChannel(channel.id);
-                  router.push(`/group/${params.serverId}/${channel.id}`);
-                }}
+                onClick={() => handleChannelClick(channel)}
                 className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 ${
-                  activeChannel === channel.id
+                  activeChannel?.id === channel.id
                     ? 'bg-gray-600 text-white'
                     : 'text-gray-400 hover:bg-gray-600 hover:text-gray-200'
                 }`}
@@ -166,18 +161,15 @@ export default function ChannelSidebar() {
         )}
 
         {/* Video Channels */}
-        {channels.VIDEO.length > 0 && (
+        {groupedChannels.VIDEO.length > 0 && (
           <div className="mb-4">
             <h3 className="text-gray-400 text-sm font-medium mb-2">VIDEO CHANNELS</h3>
-            {channels.VIDEO.map((channel) => (
+            {groupedChannels.VIDEO.map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => {
-                  setActiveChannel(channel.id);
-                  router.push(`/group/${params.serverId}/${channel.id}`);
-                }}
+                onClick={() => handleChannelClick(channel)}
                 className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 ${
-                  activeChannel === channel.id
+                  activeChannel?.id === channel.id
                     ? 'bg-gray-600 text-white'
                     : 'text-gray-400 hover:bg-gray-600 hover:text-gray-200'
                 }`}
@@ -189,18 +181,15 @@ export default function ChannelSidebar() {
         )}
 
         {/* Streaming Channels */}
-        {channels.STREAMING.length > 0 && (
+        {groupedChannels.STREAMING.length > 0 && (
           <div className="mb-4">
             <h3 className="text-gray-400 text-sm font-medium mb-2">STREAMING</h3>
-            {channels.STREAMING.map((channel) => (
+            {groupedChannels.STREAMING.map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => {
-                  setActiveChannel(channel.id);
-                  router.push(`/group/${params.serverId}/${channel.id}`);
-                }}
+                onClick={() => handleChannelClick(channel)}
                 className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 ${
-                  activeChannel === channel.id
+                  activeChannel?.id === channel.id
                     ? 'bg-gray-600 text-white'
                     : 'text-gray-400 hover:bg-gray-600 hover:text-gray-200'
                 }`}

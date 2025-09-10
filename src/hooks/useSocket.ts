@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
+
+interface ServerInvitation {
+  id: string;
+  serverId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+}
+
+interface InvitationEvent {
+  invitation: ServerInvitation;
+  serverName: string;
+  invitedByName: string;
+}
 
 export const useSocket = (channelId?: string) => {
   const { data: session } = useSession();
@@ -26,6 +39,28 @@ export const useSocket = (channelId?: string) => {
 
       if (channelId) {
         socket.emit('join-channel', channelId);
+      }
+    };
+
+    const handleInvitation = async (invitationId: string, status: 'ACCEPTED' | 'DECLINED') => {
+      try {
+        const response = await fetch(`/api/invitations/${invitationId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to respond to invitation');
+        }
+
+        toast.success(status === 'ACCEPTED' 
+          ? 'Đã tham gia server thành công!' 
+          : 'Đã từ chối lời mời');
+
+      } catch (error) {
+        console.error('Error handling invitation:', error);
+        toast.error('Có lỗi xảy ra khi xử lý lời mời');
       }
     };
 

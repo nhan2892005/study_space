@@ -65,15 +65,7 @@ export async function POST(
         },
       });
 
-      // Notify the inviter through socket
-      const io = global.io;
-      if (io) {
-        io.to(`user:${invitation.invitedBy.id}`).emit('invitation-accepted', {
-          invitationId,
-          serverName: invitation.server.name,
-          acceptedByName: session.user.name,
-        });
-      }
+      // No need for socket notification
     }
 
     return NextResponse.json({ message: `Invitation ${status.toLowerCase()}` });

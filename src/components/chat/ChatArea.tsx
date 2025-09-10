@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
+import { useServer } from '@/contexts/ServerContext';
 import InviteMemberModal from './InviteMemberModal';
 
 interface Message {
@@ -34,26 +35,10 @@ interface ChatAreaProps {
 
 export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
   const [message, setMessage] = useState('');
-  const [server, setServer] = useState<Server | null>(null);
+  const { activeServer } = useServer();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchServer = async () => {
-      try {
-        const response = await fetch(`/api/servers/${serverId}`);
-        if (!response.ok) throw new Error('Failed to fetch server');
-        const data = await response.json();
-        setServer(data);
-      } catch (error) {
-        console.error('Error fetching server:', error);
-        toast.error('Failed to load server');
-      }
-    };
-
-    fetchServer();
-  }, [serverId]);
 
   useEffect(() => {
     if (!channelId) return;
@@ -61,6 +46,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     const fetchChannel = async () => {
       try {
         const response = await fetch(`/api/servers/${serverId}/channels/${channelId}`);
+        console.log(response);
         if (!response.ok) throw new Error('Failed to fetch channel');
         const data = await response.json();
         setChannel(data);
@@ -73,6 +59,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     const fetchMessages = async () => {
       try {
         const response = await fetch(`/api/servers/${serverId}/channels/${channelId}/messages`);
+        console.log(response);
         if (!response.ok) throw new Error('Failed to fetch messages');
         const data = await response.json();
         setMessages(data);
@@ -107,14 +94,14 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
   };
 
   // Render welcome screen if no channel is selected
-  if (!channelId && server) {
+  if (!channelId && activeServer) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-gray-700">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Welcome to {server.name}!
+          Welcome to {activeServer.name}!
         </h1>
-        {server.description && (
-          <p className="text-gray-600 dark:text-gray-300 mb-8">{server.description}</p>
+        {activeServer.description && (
+          <p className="text-gray-600 dark:text-gray-300 mb-8">{activeServer.description}</p>
         )}
         <button
           onClick={() => setIsInviteModalOpen(true)}

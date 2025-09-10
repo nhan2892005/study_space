@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { NAV_ITEMS, USER_MENU_ITEMS } from '@/constants/navigation';
 import { useTheme } from 'next-themes';
 import AuthButtons from '../auth/authButton';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -49,6 +50,12 @@ export default function Navbar() {
             <button className="ml-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
               🌐
             </button>
+
+            {session?.user && (
+              <div className="ml-4">
+                <NotificationDropdown />
+              </div>
+            )}
 
             <AuthButtons/>
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import CreateServerModal from './CreateServerModal';
+import { useServer } from '@/contexts/ServerContext';
 
 interface Server {
   id: string;
@@ -17,25 +18,8 @@ interface Server {
 export default function ChatSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [servers, setServers] = useState<Server[]>([]);
-  const [activeServer, setActiveServer] = useState<string>();
+  const { servers, activeServer, setActiveServer } = useServer();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchServers = async () => {
-      try {
-        const response = await fetch('/api/servers');
-        if (!response.ok) throw new Error('Failed to fetch servers');
-        const data = await response.json();
-        setServers(data);
-      } catch (error) {
-        console.error('Error fetching servers:', error);
-        toast.error('Failed to load servers');
-      }
-    };
-
-    fetchServers();
-  }, []);
 
   const handleServerClick = (serverId: string) => {
     setActiveServer(serverId);
