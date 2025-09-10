@@ -43,18 +43,17 @@ export default function ChatSidebar() {
   };
 
   const defaultServerIcon = (serverName: string) => 
-    `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(serverName)}`;
+    `https://api.dicebear.com/9.x/initials/png?seed=${encodeURIComponent(serverName)}`;
 
   return (
     <div className="w-20 h-screen bg-gray-800 dark:bg-gray-900 flex flex-col items-center py-4 gap-4">
       {/* Home Button */}
-      <Link
-        href="/"
+      <Link href="/"
         className={`w-12 h-12 rounded-full flex items-center justify-center bg-gray-700 hover:bg-blue-600 transition-colors ${
           pathname === '/' ? 'bg-blue-600' : ''
         }`}
       >
-        <Image src="/home.svg" alt="Home" width={24} height={24} />
+        <Image src="https://api.dicebear.com/9.x/thumbs/png?seed=Home" alt="Home" width={24} height={24} />
       </Link>
 
       <div className="w-12 h-[2px] bg-gray-700 rounded-full mx-auto" />
@@ -73,7 +72,7 @@ export default function ChatSidebar() {
             }`}
           >
             <Image
-              src={server.image || defaultServerIcon(server.name)}
+              src={server.image ? server.image : defaultServerIcon(server.name)}
               alt={server.name}
               width={32}
               height={32}
