@@ -2,27 +2,77 @@
 
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { useSocket } from '@/contexts/SocketContext';
 
 type ChannelType = 'TEXT' | 'VOICE' | 'VIDEO' | 'STREAMING';
 
 interface CreateChannelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { name: string; type: ChannelType; description?: string }) => void;
+  serverId: string;
+  onChannelCreated?: (channel: any) => void;
 }
 
-export default function CreateChannelModal({ isOpen, onClose, onSubmit }: CreateChannelModalProps) {
+export default function CreateChannelModal({ isOpen, onClose, serverId, onChannelCreated }: CreateChannelModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ChannelType>('TEXT');
   const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { socket } = useSocket();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name, type, description: description || undefined });
-    setName('');
-    setDescription('');
-    setType('TEXT');
-    onClose();
+    
+    if (!name.trim()) {
+      toast.error('Channel name is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/servers/${serverId}/channels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          type,
+          description: description.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create channel');
+      }
+
+      const channel = await response.json();
+      
+      // Emit socket event to notify all server members about new channel
+      if (socket) {
+        socket.emit('channel-created', { 
+          channelId: channel.id, 
+          serverId: serverId 
+        });
+      }
+
+      toast.success('Channel created successfully!');
+      
+      // Call callback if provided
+      if (onChannelCreated) {
+        onChannelCreated(channel);
+      }
+
+      setName('');
+      setDescription('');
+      setType('TEXT');
+      onClose();
+    } catch (error) {
+      console.error('Error creating channel:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create channel');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -114,9 +164,10 @@ export default function CreateChannelModal({ isOpen, onClose, onSubmit }: Create
                     </button>
                     <button
                       type="submit"
-                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      disabled={isSubmitting || !name.trim()}
+                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Create
+                      {isSubmitting ? 'Creating...' : 'Create'}
                     </button>
                   </div>
                 </form>

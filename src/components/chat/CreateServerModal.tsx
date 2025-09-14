@@ -3,17 +3,20 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useSocket } from '@/contexts/SocketContext';
 
 interface CreateServerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onServerCreated?: (server: any) => void;
 }
 
-export default function CreateServerModal({ isOpen, onClose }: CreateServerModalProps) {
+export default function CreateServerModal({ isOpen, onClose, onServerCreated }: CreateServerModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { socket } = useSocket();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +44,19 @@ export default function CreateServerModal({ isOpen, onClose }: CreateServerModal
       }
 
       const server = await response.json();
+      
+      // Emit socket event to join the creator to the new server rooms
+      if (socket) {
+        socket.emit('server-created', { serverId: server.id });
+      }
+
       toast.success('Server created successfully!');
+      
+      // Call callback if provided
+      if (onServerCreated) {
+        onServerCreated(server);
+      }
+
       setName('');
       setDescription('');
       setImage('');

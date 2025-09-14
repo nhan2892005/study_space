@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+import { createToken } from '@/lib/jwt';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
   callbacks: {
-    async signIn({ profile }) {
+    async signIn({ profile, account }) {
       const userEmail = (profile as any)?.email;
 
       if (!userEmail) {
@@ -29,81 +29,105 @@ export const authOptions: NextAuthOptions = {
 
       // Kiểm tra domain
       const allowedDomains = ["hcmut.edu.vn", "gmail.com"];
-
       const domain = userEmail.split("@")[1]?.toLowerCase();
 
       if (!allowedDomains.includes(domain)) {
         return false;
       }
 
+      // Extract role from redirect URI if available
+      let roleFromUrl: string | null = null;
+      if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
+        try {
+          const url = new URL(account.redirect_uri);
+          const role = url.searchParams.get("role");
+          if (role === "MENTOR" || role === "MENTEE" || role === "ADMIN") {
+            roleFromUrl = role;
+          }
+        } catch (error) {
+          console.error("Error parsing redirect URI:", error);
+        }
+      }
+      
       try {
-        // Check if user exists, if not create new user
+        // Tìm hoặc tạo user trong database
         const user = await prisma.user.upsert({
           where: { email: userEmail },
-          update: {},
+          update: {
+            name: (profile as any)?.name || null,
+            image: (profile as any)?.picture || null,
+            emailVerified: new Date(),
+          },
           create: {
             email: userEmail,
-            name: (profile as any).name || 'Unknown User',
-            image: (profile as any).picture,
-            role: "MENTEE", // Default role
+            name: (profile as any)?.name || null,
+            image: (profile as any)?.picture || null,
+            role: roleFromUrl || "MENTEE", // Default to MENTEE if no role specified
+            emailVerified: new Date(),
           },
         });
+
         return true;
       } catch (error) {
         console.error("Error during sign in:", error);
         return false;
       }
-      // if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
-      //   const url = new URL(account.redirect_uri);
-      //   const role = url.searchParams.get("role");
-      //   if (role === "MENTOR" || role === "MENTEE" || role === "ADMIN") {
-      //     roleFromUrl = role;
-      //   }
-      // }
-      
-      // try {
-      //   // Tìm hoặc tạo user trong database
-      //   const user = await prisma.user.upsert({
-      //     where: { email: userEmail },
-      //     update: {
-      //       name: profile?.name || null,
-      //       image: (profile as any)?.picture || null,
-      //       emailVerified: new Date(),
-      //     },
-      //     create: {
-      //       email: userEmail,
-      //       name: profile?.name || null,
-      //       image: (profile as any)?.picture || null,
-      //       role: roleFromUrl || "MENTEE", // Default to MENTEE if no role specified
-      //       emailVerified: new Date(),
-      //     },
-      //   });
-
-      //   return true;
-      // } catch (error) {
-      //   console.error("Error during sign in:", error);
-      //   return false;
-      // }
     },
-    async jwt({ token }) {
+    
+    async jwt({ token, user }) {
+      if (user) {
+        // On first sign in, add user info to token
+        token.sub = user.id;
+      }
+      
       if (token.email) {
-        // Fetch user from database and add role to token
-        const user = await prisma.user.findUnique({
+        // Fetch user from database and add info to token
+        const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { role: true }
+          select: { 
+            id: true,
+            role: true,
+            name: true,
+            email: true
+          }
         });
-        if (user) {
-          token.role = user.role;
+        
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.sub = dbUser.id;
+          token.name = dbUser.name;
+          token.email = dbUser.email;
         }
       }
+      
       return token;
     },
+    
     async session({ session, token }) {
-      if (token && session.user) {
+      if (session.user && token) {
+        // Add user info to session
+        session.user.id = token.sub as string;
         session.user.role = token.role as string;
+        
+        // Create JWT token for socket authentication
+        if (token.email && token.sub) {
+          const jwtToken = createToken({
+            userId: token.sub as string,
+            email: token.email as string,
+            name: token.name as string || undefined,
+          });
+          
+          session.accessToken = jwtToken;
+        }
       }
+      
       return session;
     },
+  },
+  
+  pages: {
+    signIn: '/',
+    error: '/',
   },
 };
 

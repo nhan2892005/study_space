@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { useServer } from '@/contexts/ServerContext';
 import { useMessages } from '@/hooks/useMessages';
+import { useSocket } from '@/contexts/SocketContext';
 import InviteMemberModal from './InviteMemberModal';
 
 interface FileData {
@@ -35,9 +36,22 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
-  // Use the custom hook for messages
-  const { messages, loading, sendMessage } = useMessages(serverId, channelId);
+  // Use the updated hook for messages with socket support
+  const { 
+    messages, 
+    loading, 
+    sendMessage, 
+    isConnected, 
+    typingUsers, 
+    handleTyping, 
+    handleStopTyping 
+  } = useMessages(serverId, channelId);
+
+  const { socket } = useSocket();
+
+  console.log(socket)
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -84,6 +98,8 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     if ((!message.trim() && selectedFiles.length === 0) || !channelId) return;
 
     setUploading(true);
+    handleStopTyping(); // Stop typing indicator when sending
+    
     try {
       const success = await sendMessage(message, selectedFiles);
       
@@ -99,6 +115,17 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     }
   };
 
+  // Handle typing indicators
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessage(e.target.value);
+    handleTyping(); // Trigger typing indicator
+  };
+
+  const handleInputBlur = () => {
+    handleStopTyping(); // Stop typing when input loses focus
+  };
+
+  // Render file preview function
   const renderFilePreview = (file: FileData) => {
     switch (file.type) {
       case 'IMAGE':
@@ -254,6 +281,16 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
               {channel.description}
             </span>
           )}
+          {/* Connection status indicator */}
+          <div className="ml-3 flex items-center">
+            <div 
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
+              title={isConnected ? 'Connected' : 'Disconnected'} 
+            />
+            <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => setIsInviteModalOpen(true)}
@@ -329,6 +366,26 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
                 </div>
               );
             })}
+            
+            {/* Typing indicators */}
+            {typingUsers.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 italic pl-2">
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                </div>
+                <span>
+                  {typingUsers.length === 1 
+                    ? `${typingUsers[0].userName} is typing...`
+                    : typingUsers.length === 2
+                    ? `${typingUsers[0].userName} and ${typingUsers[1].userName} are typing...`
+                    : `${typingUsers[0].userName} and ${typingUsers.length - 1} others are typing...`
+                  }
+                </span>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -383,6 +440,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors flex-shrink-0"
             title="Attach files"
+            disabled={uploading}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -401,17 +459,25 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
           </button>
           <div className="flex-1">
             <input
+              ref={messageInputRef}
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e);
+                }
+              }}
               placeholder={`Message #${channel?.name || 'channel'}...`}
-              disabled={uploading}
+              disabled={uploading || !isConnected}
               className="w-full rounded-lg bg-gray-100 dark:bg-gray-600 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50"
             />
           </div>
           <button
             type="submit"
-            disabled={(!message.trim() && selectedFiles.length === 0) || uploading}
+            disabled={(!message.trim() && selectedFiles.length === 0) || uploading || !isConnected}
             className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors flex-shrink-0"
             title="Send message"
           >

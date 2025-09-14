@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/providers/Providers";
 import { ServerProvider } from "@/contexts/ServerContext";
 import Navbar from "@/components/navbar/Navbar";
+import { SocketProvider } from "@/contexts/SocketContext";
 
 const geistSans = Inter({
   variable: "--font-geist-sans",
@@ -31,12 +32,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <SocketProvider>
           <ServerProvider>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
               <Navbar/>
               {children}
             </div>
           </ServerProvider>
+          </SocketProvider>
         </Providers>
       </body>
     </html>

@@ -41,7 +41,7 @@ export default function NotificationDropdown() {
 
   const handleAcceptInvitation = async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/invitations/${notificationId}`, {
+      const response = await fetch(`/api/invitations/${notificationId}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'ACCEPTED' }),

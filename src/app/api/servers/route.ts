@@ -40,10 +40,7 @@ export async function POST(request: Request) {
         channels: {
           createMany: {
             data: [
-              { name: 'general', type: 'TEXT', description: 'General discussion' },
-              { name: 'announcements', type: 'TEXT', description: 'Important announcements' },
-              { name: 'voice-chat', type: 'VOICE', description: 'Voice chat room' },
-              { name: 'recordings', type: 'VIDEO', description: 'Recorded sessions' },
+              { name: 'welcome', type: 'TEXT', description: 'General discussion' },
             ],
           },
         },

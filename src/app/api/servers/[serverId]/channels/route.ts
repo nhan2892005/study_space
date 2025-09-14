@@ -16,6 +16,7 @@ export async function POST(
 
     const { name, type, description } = await request.json();
     const { serverId } = params;
+    console.log(params)
 
     if (!name?.trim() || !type || !Object.values(ChannelType).includes(type)) {
       return NextResponse.json(
@@ -23,6 +24,8 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    console.log(`server: ${serverId}, email: ${session.user.email}`)
 
     // Check if user has permission to create channel
     const member = await prisma.serverMember.findFirst({

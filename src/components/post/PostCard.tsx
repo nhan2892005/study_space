@@ -105,7 +105,6 @@ export default function PostCard({ post }: PostCardProps) {
       setIsSubmitting(false);
     }
   };
-  console.log(localPost.comments[0].author.image)
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-4">
       {/* Author Info */}

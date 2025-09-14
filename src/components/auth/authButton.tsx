@@ -29,13 +29,15 @@ export default function AuthButtons() {
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 dark:divide-gray-700">
-            <div className="px-1 py-1">
+<Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md
+  bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none
+  dark:bg-gray-800 dark:divide-gray-700 z-50">            
+  <div className="px-1 py-1">
               {(['mentee', 'mentor', 'admin'] as UserRole[]).map((role) => (
                 <Menu.Item key={role}>
                   {({ active }) => (
                     <button
-                      onClick={() => signIn("google", { callbackUrl: `/api/auth/assign?role=${role}` })}
+                      onClick={() => signIn("google", { callbackUrl: `/?role=${role}` })}
                       className={`${
                         active ? 'bg-blue-500 text-white' : 'text-gray-900 dark:text-gray-100'
                       } group flex w-full items-center rounded-md px-2 py-2 text-sm capitalize`}
@@ -78,8 +80,10 @@ export default function AuthButtons() {
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 dark:divide-gray-700">
-          <div className="px-1 py-1">
+<Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md
+  bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none
+  dark:bg-gray-800 dark:divide-gray-700 z-50">          
+        <div className="px-1 py-1">
             {USER_MENU_ITEMS.filter(item => item.label !== 'Sign Out').map((item) => (
               <Menu.Item key={item.label}>
                 {({ active }) => (
@@ -91,7 +95,7 @@ export default function AuthButtons() {
                   >
                     {item.icon && (
                       <Image 
-                        src={`/icons/${item.icon.toLowerCase()}.svg`}
+                        src={`https://api.dicebear.com/9.x/icons/svg?seed=${item.icon.toLowerCase()}`}
                         alt={item.label}
                         width={16}
                         height={16}

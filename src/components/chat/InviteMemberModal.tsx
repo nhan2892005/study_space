@@ -3,6 +3,7 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useSocket } from '@/contexts/SocketContext';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface InviteMemberModalProps {
 export default function InviteMemberModal({ isOpen, onClose, serverId }: InviteMemberModalProps) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { socket } = useSocket();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +36,7 @@ export default function InviteMemberModal({ isOpen, onClose, serverId }: InviteM
         throw new Error(error.error || 'Failed to send invitation');
       }
 
+      const result = await response.json();
       toast.success('Invitation sent successfully!');
       setEmail('');
       onClose();
@@ -90,6 +93,7 @@ export default function InviteMemberModal({ isOpen, onClose, serverId }: InviteM
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="user@example.com"
                       required
                     />
                   </div>
