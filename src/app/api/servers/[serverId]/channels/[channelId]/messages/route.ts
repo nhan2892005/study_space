@@ -1,135 +1,144 @@
+// src/app/api/servers/[serverId]/channels/[channelId]/messages/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
 
+interface FileData {
+  name: string;
+  url: string;
+  type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO';
+  size: number;
+}
+
 export async function GET(
-  req: Request,
+  request: Request,
   { params }: { params: { serverId: string; channelId: string } }
 ) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { serverId, channelId } = params;
-
-    // Verify user is member of server
-    const member = await prisma.serverMember.findFirst({
+    // Verify user is member of the server
+    const membership = await prisma.serverMember.findFirst({
       where: {
-        serverId: serverId,
-        user: {
-          email: session.user.email
-        }
-      }
+        serverId: params.serverId,
+        user: { email: session.user.email },
+      },
     });
 
-    if (!member) {
-      return new NextResponse("Forbidden", { status: 403 });
+    if (!membership) {
+      return NextResponse.json({ error: 'Not a member of this server' }, { status: 403 });
     }
 
-    // Fetch messages with author information and files
+    // Fetch messages with files
     const messages = await prisma.message.findMany({
-      where: {
-        channelId: channelId
-      },
+      where: { channelId: params.channelId },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
+          select: { name: true, image: true },
         },
-        files: {
-          select: {
-            id: true,
-            name: true,
-            url: true,
-            type: true,
-            size: true
-          }
-        }
+        files: true,
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50 // Limit to last 50 messages
+      orderBy: { createdAt: 'asc' },
+      take: 50, // Limit to last 50 messages
     });
 
-    return NextResponse.json(messages);
-
+    return NextResponse.json(
+      messages.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        type: msg.type,
+        author: {
+          name: msg.author.name || 'Unknown User',
+          image: msg.author.image || '',
+        },
+        files: msg.files,
+        timestamp: msg.createdAt,
+      }))
+    );
   } catch (error) {
-    console.error("[MESSAGES_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error('Error fetching messages:', error);
+    return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
   }
 }
 
 export async function POST(
-  req: Request,
+  request: Request,
   { params }: { params: { serverId: string; channelId: string } }
 ) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { serverId, channelId } = params;
-    const { content } = await req.json();
-
-    if (!content || typeof content !== "string") {
-      return new NextResponse("Invalid content", { status: 400 });
-    }
-
-    // Verify user is member of server
-    const member = await prisma.serverMember.findFirst({
+    // Verify user is member of the server
+    const membership = await prisma.serverMember.findFirst({
       where: {
-        serverId: serverId,
-        user: {
-          email: session.user.email
-        }
-      }
+        serverId: params.serverId,
+        user: { email: session.user.email },
+      },
     });
 
-    if (!member) {
-      return new NextResponse("Forbidden", { status: 403 });
+    if (!membership) {
+      return NextResponse.json({ error: 'Not a member of this server' }, { status: 403 });
     }
+
+    const { content, type = 'TEXT', files = [] }: {
+      content: string;
+      type?: 'TEXT' | 'FILE' | 'SYSTEM';
+      files?: FileData[];
+    } = await request.json();
 
     // Get user
     const user = await prisma.user.findUnique({
-      where: {
-        email: session.user.email
-      }
+      where: { email: session.user.email },
     });
 
     if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Create message
+    // Create message with files
     const message = await prisma.message.create({
       data: {
         content,
-        channelId,
+        type,
         authorId: user.id,
+        channelId: params.channelId,
+        files: {
+          create: files.map(file => ({
+            name: file.name,
+            url: file.url,
+            type: file.type,
+            size: file.size,
+          })),
+        },
       },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
+          select: { name: true, image: true },
         },
-        files: true
-      }
+        files: true,
+      },
     });
 
-    return NextResponse.json(message);
-
+    return NextResponse.json({
+      id: message.id,
+      content: message.content,
+      type: message.type,
+      author: {
+        name: message.author.name || 'Unknown User',
+        image: message.author.image || '',
+      },
+      files: message.files,
+      timestamp: message.createdAt,
+    });
   } catch (error) {
-    console.error("[MESSAGES_POST]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error('Error creating message:', error);
+    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
 }
