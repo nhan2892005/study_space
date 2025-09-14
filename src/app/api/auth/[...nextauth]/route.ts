@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
           create: {
             email: userEmail,
             name: (profile as any).name || 'Unknown User',
-            image: (profile as any).image,
+            image: (profile as any).picture,
             role: "MENTEE", // Default role
           },
         });

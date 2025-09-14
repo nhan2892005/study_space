@@ -59,9 +59,9 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     const fetchMessages = async () => {
       try {
         const response = await fetch(`/api/servers/${serverId}/channels/${channelId}/messages`);
-        console.log(response);
         if (!response.ok) throw new Error('Failed to fetch messages');
         const data = await response.json();
+        console.log(data);
         setMessages(data);
       } catch (error) {
         console.error('Error fetching messages:', error);
@@ -143,7 +143,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
         {messages.map((msg) => (
           <div key={msg.id} className="flex items-start gap-3">
             <Image
-              src={msg.author.image}
+              src={msg.author.image || `https://api.dicebear.com/9.x/adventurer/svg?seed=${msg.author.name}`}
               alt={msg.author.name}
               width={40}
               height={40}

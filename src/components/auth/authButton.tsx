@@ -35,7 +35,7 @@ export default function AuthButtons() {
                 <Menu.Item key={role}>
                   {({ active }) => (
                     <button
-                      onClick={() => signIn("google", { callbackUrl: `/?role=${role}` })}
+                      onClick={() => signIn("google", { callbackUrl: `/api/auth/assign?role=${role}` })}
                       className={`${
                         active ? 'bg-blue-500 text-white' : 'text-gray-900 dark:text-gray-100'
                       } group flex w-full items-center rounded-md px-2 py-2 text-sm capitalize`}
