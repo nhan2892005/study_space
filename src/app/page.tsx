@@ -1,4 +1,3 @@
-import { mockMentors } from "@/data/mentors";
 import MentorCard from "@/components/mentor/MentorCard";
 import PostCard from "@/components/post/PostCard";
 import CreatePost from "@/components/post/CreatePost";

@@ -3,7 +3,6 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useSocket } from '@/hooks/useSocket';
 
 interface Notification {
   id: string;

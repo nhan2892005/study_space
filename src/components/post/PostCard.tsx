@@ -105,21 +105,18 @@ export default function PostCard({ post }: PostCardProps) {
       setIsSubmitting(false);
     }
   };
+  console.log(localPost.comments[0].author.image)
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-4">
       {/* Author Info */}
       <div className="flex items-center mb-4">
-        {post.author.image ? (
-          <Image
-            src={post.author.image}
-            alt={post.author.name || 'User'}
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-        ) : (
-          <div className="w-10 h-10 bg-gray-200 rounded-full" />
-        )}
+        <Image
+          src={post.author.image || `https://api.dicebear.com/9.x/adventurer/svg?seed=${post.author.name}`}
+          alt={post.author.name || 'User'}
+          width={40}
+          height={40}
+          className="rounded-full"
+        />
         <div className="ml-3">
           <p className="font-medium text-gray-900 dark:text-white">
             {post.author.name}
@@ -188,17 +185,13 @@ export default function PostCard({ post }: PostCardProps) {
         </h3>
         {localPost.comments.map((comment) => (
           <div key={comment.id} className="flex gap-3 mb-3">
-            {comment.author.image ? (
-              <Image
-                src={comment.author.image}
-                alt={comment.author.name || 'User'}
-                width={32}
-                height={32}
-                className="rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 bg-gray-200 rounded-full" />
-            )}
+            <Image
+              src={comment.author.image !== null ? comment.author.image : `https://api.dicebear.com/9.x/adventurer/svg?seed=${comment.author.name}`}
+              alt={comment.author.name || 'User'}
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {comment.author.name}
