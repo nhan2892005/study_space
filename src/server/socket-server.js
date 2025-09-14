@@ -57,6 +57,14 @@ io.use(async (socket, next) => {
 // Store active connections by user
 const activeConnections = new Map();
 
+// Mediasoup service
+const mediasoupService = require('./mediasoup-service');
+
+// Initialize mediasoup workers (async fire-and-forget)
+mediasoupService.init({ numWorkers: 1 }).catch(err => {
+  console.error('Failed to init mediasoup service', err);
+});
+
 io.on('connection', async (socket) => {
   console.log(`User ${socket.user.name} connected`);
   
@@ -249,6 +257,127 @@ io.on('connection', async (socket) => {
       console.error('Error handling channel creation:', error);
     }
   });
+
+  // ------------------ mediasoup signaling handlers ------------------
+  socket.on('getRouterRtpCapabilities', async ({ channelId }, callback) => {
+    try {
+      const router = await mediasoupService.getOrCreateRouter(channelId);
+      callback({ rtpCapabilities: router.rtpCapabilities });
+    } catch (err) {
+      console.error('getRouterRtpCapabilities error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('createWebRtcTransport', async ({ channelId }, callback) => {
+    try {
+      const router = await mediasoupService.getOrCreateRouter(channelId);
+      const { transport, params } = await mediasoupService.createWebRtcTransport(router);
+
+      // store transport on socket for cleanup and reference
+      socket.data = socket.data || {};
+      socket.data.transports = socket.data.transports || new Map();
+      socket.data.transports.set(params.id, transport);
+
+      callback(params);
+    } catch (err) {
+      console.error('createWebRtcTransport error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('connectTransport', async ({ transportId, dtlsParameters }, callback) => {
+    try {
+      const transport = socket.data?.transports?.get(transportId);
+      if (!transport) throw new Error('transport not found');
+      await mediasoupService.connectTransport(transport, dtlsParameters);
+      callback({ ok: true });
+    } catch (err) {
+      console.error('connectTransport error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('produce', async ({ channelId, transportId, kind, rtpParameters }, callback) => {
+    try {
+      const transport = socket.data?.transports?.get(transportId);
+      if (!transport) throw new Error('transport not found');
+
+      const producer = await transport.produce({ kind, rtpParameters });
+
+      // save
+      socket.data.producers = socket.data.producers || new Map();
+      socket.data.producers.set(producer.id, producer);
+
+      // notify others in channel
+      // include both userId and socketId so clients can identify the producer's connection
+      socket.to(`channel:${channelId}`).emit('newProducer', {
+        producerId: producer.id,
+        producerPeerId: socket.userId,
+        producerPeerSocketId: socket.id,
+      });
+
+      callback({ id: producer.id });
+    } catch (err) {
+      console.error('produce error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('consume', async ({ channelId, producerId, rtpCapabilities }, callback) => {
+    try {
+      const router = await mediasoupService.getOrCreateRouter(channelId);
+      if (!mediasoupService.canConsume(router, producerId, rtpCapabilities)) {
+        callback({ error: 'cannotConsume' });
+        return;
+      }
+
+      // create recv transport if not exists
+      socket.data = socket.data || {};
+      socket.data.transports = socket.data.transports || new Map();
+      let recvTransport = socket.data.transports.get('recv');
+      if (!recvTransport) {
+        const { transport, params } = await mediasoupService.createWebRtcTransport(router);
+        recvTransport = transport;
+        socket.data.transports.set('recv', recvTransport);
+        // return params to client so they can create transport
+        callback({ transportParams: params });
+        return;
+      }
+
+      // create consumer on existing recvTransport
+      const consumer = await recvTransport.consume({ producerId, rtpCapabilities, paused: false });
+      socket.data.consumers = socket.data.consumers || new Map();
+      socket.data.consumers.set(consumer.id, consumer);
+
+      callback({ id: consumer.id, producerId, kind: consumer.kind, rtpParameters: consumer.rtpParameters });
+    } catch (err) {
+      console.error('consume error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('resumeConsumer', async ({ consumerId }, callback) => {
+    try {
+      const consumer = socket.data?.consumers?.get(consumerId);
+      if (!consumer) throw new Error('consumer not found');
+      await consumer.resume();
+      callback({ ok: true });
+    } catch (err) {
+      console.error('resumeConsumer error', err);
+      callback({ error: err.message });
+    }
+  });
+
+  socket.on('streamStarted', ({ channelId }) => {
+    socket.to(`channel:${channelId}`).emit('streamStarted', { peerId: socket.userId });
+  });
+
+  socket.on('streamStopped', ({ channelId }) => {
+    socket.to(`channel:${channelId}`).emit('streamStopped', { peerId: socket.userId });
+  });
+
+  // ------------------------------------------------------------------
 
   // Handle member invitation accepted
   socket.on('member-joined', async (data) => {

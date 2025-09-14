@@ -1,10 +1,8 @@
-// src/contexts/SocketContext.tsx
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
-import { toast } from 'react-hot-toast';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -24,6 +22,16 @@ interface SocketContextType {
   onUserStoppedTyping: (callback: (data: any) => void) => void;
   startTyping: (channelId: string) => void;
   stopTyping: (channelId: string) => void;
+  // mediasoup helpers
+  getRouterRtpCapabilities?: (channelId: string) => Promise<any>;
+  createWebRtcTransport?: (channelId: string) => Promise<any>;
+  connectTransport?: (transportId: string, dtlsParameters: any) => Promise<any>;
+  produce?: (payload: any) => Promise<any>;
+  consume?: (payload: any) => Promise<any>;
+  resumeConsumer?: (consumerId: string) => Promise<any>;
+  onNewProducer?: (callback: (data: any) => void) => void;
+  onStreamStarted?: (callback: (data: any) => void) => void;
+  onStreamStopped?: (callback: (data: any) => void) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -72,21 +80,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     });
 
     socketInstance.on('connect', () => {
-      console.log('Connected to socket server');
       setIsConnected(true);
-      toast.success('Connected to chat server');
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('Disconnected from socket server');
       setIsConnected(false);
-      toast.error('Disconnected from chat server');
     });
 
     socketInstance.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
       setIsConnected(false);
-      toast.error('Failed to connect to chat server');
     });
 
     setSocket(socketInstance);
@@ -168,6 +171,86 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  // Mediasoup signaling helpers
+  const getRouterRtpCapabilities = async (channelId: string) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('getRouterRtpCapabilities', { channelId }, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  const createWebRtcTransport = async (channelId: string) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('createWebRtcTransport', { channelId }, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  const connectTransport = async (transportId: string, dtlsParameters: any) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('connectTransport', { transportId, dtlsParameters }, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  const produce = async (payload: any) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('produce', payload, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  const consume = async (payload: any) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('consume', payload, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  const resumeConsumer = async (consumerId: string) => {
+    if (!socket) throw new Error('Socket not initialized');
+    return await new Promise((resolve, reject) => {
+      socket.emit('resumeConsumer', { consumerId }, (res: any) => {
+        if (res?.error) reject(new Error(res.error));
+        else resolve(res);
+      });
+    });
+  };
+
+  // Events: newProducer, streamStarted, streamStopped
+  const onNewProducer = (callback: (data: any) => void) => {
+    if (!socket) return;
+    socket.on('newProducer', callback);
+    return () => socket.off('newProducer', callback);
+  };
+
+  const onStreamStarted = (callback: (data: any) => void) => {
+    if (!socket) return;
+    socket.on('streamStarted', callback);
+    return () => socket.off('streamStarted', callback);
+  };
+
+  const onStreamStopped = (callback: (data: any) => void) => {
+    if (!socket) return;
+    socket.on('streamStopped', callback);
+    return () => socket.off('streamStopped', callback);
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -183,6 +266,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         onUserStoppedTyping,
         startTyping,
         stopTyping,
+        // mediasoup helpers
+        getRouterRtpCapabilities,
+        createWebRtcTransport,
+        connectTransport,
+        produce,
+        consume,
+        resumeConsumer,
+        onNewProducer,
+        onStreamStarted,
+        onStreamStopped,
       }}
     >
       {children}

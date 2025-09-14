@@ -7,6 +7,7 @@ import { useServer } from '@/contexts/ServerContext';
 import { useMessages } from '@/hooks/useMessages';
 import { useSocket } from '@/contexts/SocketContext';
 import InviteMemberModal from './InviteMemberModal';
+import StreamingArea from './StreamingArea';
 
 interface FileData {
   id: string;
@@ -20,6 +21,7 @@ interface Channel {
   id: string;
   name: string;
   description?: string;
+  type: 'TEXT' | 'VOICE' | 'VIDEO' | 'STREAMING';
 }
 
 interface ChatAreaProps {
@@ -263,6 +265,14 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
           onClose={() => setIsInviteModalOpen(false)}
           serverId={serverId}
         />
+      </div>
+    );
+  }
+
+  if (channel && channel.type === 'STREAMING') {
+    return (
+      <div className="flex-1">
+        <StreamingArea serverId={serverId} channelId={channel.id} />
       </div>
     );
   }

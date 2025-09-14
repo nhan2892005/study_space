@@ -3,14 +3,13 @@ import { UserRole } from "@/types/user";
 export const ROUTES = {
   HOME: '/',
   GROUP: '/group',
-  STORAGE: '/storage',
+  CALENDAR: '/calendar',
   MENTORS: '/mentor',
   MY_MENTEES: '/my-mentees',
   DASHBOARD: '/dashboard',
+  ASSISTANT: '/assistchat',
   SETTINGS: {
     PROFILE: '/settings/profile',
-    SCHEDULE: '/settings/schedule',
-    RESOURCES: '/settings/resources',
     LANGUAGE: '/settings/language',
   },
 } as const;
@@ -26,32 +25,27 @@ export const NAV_ITEMS: NavigationItem[] = [
   {
     label: 'Trang chủ',
     href: ROUTES.HOME,
-    roles: ['mentee', 'mentor', 'admin'],
+    roles: ['MENTEE', 'MENTOR', 'ADMIN'],
   },
   {
-    label: 'Nhóm học tập của tôi',
+    label: 'Trao đổi',
     href: ROUTES.GROUP,
-    roles: ['mentee', 'mentor'],
-  },
-  {
-    label: 'Kho lưu trữ',
-    href: ROUTES.STORAGE,
-    roles: ['mentee', 'mentor'],
+    roles: ['MENTEE', 'MENTOR'],
   },
   {
     label: 'Danh sách mentee của tôi',
     href: ROUTES.MY_MENTEES,
-    roles: ['mentor'],
+    roles: ['MENTOR'],
   },
   {
     label: 'Mentor của tôi',
     href: ROUTES.MENTORS,
-    roles: ['mentee'],
+    roles: ['MENTEE'],
   },
   {
     label: 'Bảng điều khiển',
     href: ROUTES.DASHBOARD,
-    roles: ['mentee', 'mentor', 'admin'],
+    roles: ['MENTEE', 'MENTOR', 'ADMIN'],
   },
 ];
 
@@ -60,30 +54,12 @@ export const USER_MENU_ITEMS: NavigationItem[] = [
     label: 'Profile Settings',
     href: ROUTES.SETTINGS.PROFILE,
     icon: 'UserCircle',
-    roles: ['mentee', 'mentor', 'admin'],
-  },
-  {
-    label: 'My Schedule',
-    href: ROUTES.SETTINGS.SCHEDULE,
-    icon: 'Calendar',
-    roles: ['mentee', 'mentor'],
-  },
-  {
-    label: 'My Resources',
-    href: ROUTES.SETTINGS.RESOURCES,
-    icon: 'FolderOpen',
-    roles: ['mentee', 'mentor'],
-  },
-  {
-    label: 'Language',
-    href: ROUTES.SETTINGS.LANGUAGE,
-    icon: 'Globe',
-    roles: ['mentee', 'mentor', 'admin'],
+    roles: ['MENTEE', 'MENTOR', 'ADMIN'],
   },
   {
     label: 'Sign Out',
     href: '#',
     icon: 'ArrowRightOnRectangle',
-    roles: ['mentee', 'mentor', 'admin'],
+    roles: ['MENTEE', 'MENTOR', 'ADMIN'],
   },
 ] as const;
