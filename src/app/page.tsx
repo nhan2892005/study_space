@@ -2,12 +2,12 @@ import MentorCard from "@/components/mentor/MentorCard";
 import PostCard from "@/components/post/PostCard";
 import CreatePost from "@/components/post/CreatePost";
 import Pagination from "@/components/post/Pagination";
-import Navbar from "@/components/navbar/Navbar";
 import Image from "next/image";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import type { ExtendedPost } from "@/types/post";
+import { mockMentors } from "@/data/mentors";
 
 async function getPosts(page: number = 1, limit: number = 5) {
   const skip = (page - 1) * limit;
@@ -64,8 +64,7 @@ export default async function Home({
   const { posts, pagination } = await getPosts(page);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navbar />
+    <>
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* GRID: 1 col on mobile, 4 cols on lg */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -101,7 +100,7 @@ export default async function Home({
           </section>
 
           {/* Right sidebar: Recommended mentors (sticky on large screens) */}
-          {/* <aside className="lg:col-span-1">
+          <aside className="lg:col-span-1">
             {userRole.toString().toLowerCase() === 'mentee' && (
               <div className="relative">
                 <div className="sticky top-20">
@@ -122,7 +121,7 @@ export default async function Home({
                 </div>
               </div>
             )}
-          </aside> */}
+          </aside>
         </div>
       </main>
 
@@ -176,6 +175,6 @@ export default async function Home({
           </div>
         </div>
       </footer>
-    </div>
+    </>
   );
 }

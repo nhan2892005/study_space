@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers/Providers";
 import { ServerProvider } from "@/contexts/ServerContext";
+import Navbar from "@/components/navbar/Navbar";
 
 const geistSans = Inter({
   variable: "--font-geist-sans",
@@ -31,7 +32,10 @@ export default function RootLayout({
       >
         <Providers>
           <ServerProvider>
-            {children}
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+              <Navbar/>
+              {children}
+            </div>
           </ServerProvider>
         </Providers>
       </body>
