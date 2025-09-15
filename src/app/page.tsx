@@ -7,7 +7,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import type { ExtendedPost } from "@/types/post";
-import { mockMentors } from "@/data/mentors";
+import RoleAssigner from '@/components/auth/RoleAssigner';
+// remove mockMentors import — we'll fetch top mentors from DB
 
 async function getPosts(page: number = 1, limit: number = 5) {
   const skip = (page - 1) * limit;
@@ -62,9 +63,38 @@ export default async function Home({
   const userRole = session?.user?.role || 'guest';
   const page = Number(searchParams['page']) || 1;
   const { posts, pagination } = await getPosts(page);
+  // Fetch top mentors from DB (by MentorProfile.rating)
+  const mentorProfiles = await prisma.mentorProfile.findMany({
+    orderBy: [{ rating: 'desc' }, { totalReviews: 'desc' }],
+    take: 10,
+    include: { user: { select: { id: true, name: true, image: true, department: true, achievements: true, email: true } } }
+  });
+
+  // For each mentor, compute current mentees count
+  const mentors = await Promise.all(mentorProfiles.map(async (mp) => {
+    const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });
+    return {
+      id: mp.userId,
+      name: mp.user?.name || 'Unknown',
+      avatar: mp.user?.image || `https://api.dicebear.com/9.x/avataaars/png?seed=${mp.userId}`,
+      role: 'lecturer' as const, // map DB MENTOR role to display role; adjust if you have subtypes
+      year: undefined,
+      department: mp.user?.department || 'Unknown',
+      currentMentees,
+      maxMentees: mp.maxMentees,
+      rating: mp.rating,
+      totalReviews: mp.totalReviews,
+      availableDays: Array.isArray(mp.availableDays) ? mp.availableDays.length : 0,
+      expertise: mp.expertise || [],
+      achievements: mp.user?.achievements || [],
+      contact: { email: mp.user?.email || '' },
+      schedule: [],
+    };
+  }));
 
   return (
     <>
+      <RoleAssigner />
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* GRID: 1 col on mobile, 4 cols on lg */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -114,7 +144,7 @@ export default async function Home({
                   </div>
 
                   <div className="space-y-4">
-                    {mockMentors.map((mentor) => (
+                    {mentors.map((mentor) => (
                       <MentorCard key={mentor.id} mentor={mentor} />
                     ))}
                   </div>

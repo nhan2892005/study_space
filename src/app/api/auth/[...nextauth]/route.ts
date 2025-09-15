@@ -37,6 +37,7 @@ export const authOptions: NextAuthOptions = {
 
       // Extract role from redirect URI if available
       let roleFromUrl: string | null = null;
+      console.log(account?.redirect_uri)
       if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
         try {
           const url = new URL(account.redirect_uri);

@@ -6,10 +6,14 @@ import { toast } from 'react-hot-toast';
 
 interface Notification {
   id: string;
-  type: 'SERVER_INVITATION';
-  serverId: string;
-  serverName: string;
-  invitedByName: string;
+  type: 'SERVER_INVITATION' | 'MENTEE_REQUEST';
+  // server invitation fields
+  serverId?: string;
+  serverName?: string;
+  invitedByName?: string;
+  // mentee request fields
+  menteeId?: string;
+  menteeName?: string;
 }
 
 export default function NotificationDropdown() {
@@ -18,12 +22,26 @@ export default function NotificationDropdown() {
 
   const fetchInvitations = async () => {
     try {
-      const response = await fetch('/api/invitations');
-      if (!response.ok) throw new Error('Failed to fetch invitations');
-      
-      const data = await response.json();
-      setNotifications(data.invitations);
-      setHasUnread(data.invitations.length > 0);
+      const [invRes, reqRes] = await Promise.all([
+        fetch('/api/invitations').catch(() => null),
+        fetch('/api/mentor/requests').catch(() => null),
+      ]);
+
+      const invitations = invRes && invRes.ok ? (await invRes.json()).invitations : [];
+      const requests = reqRes && reqRes.ok ? (await reqRes.json()).requests.map((r: any) => ({
+        id: r.id,
+        type: 'MENTEE_REQUEST',
+        menteeId: r.mentee.id,
+        menteeName: r.mentee.name,
+      })) : [];
+
+      const merged = [
+        ...invitations.map((i: any) => ({ id: i.id, type: 'SERVER_INVITATION', serverId: i.serverId, serverName: i.serverName, invitedByName: i.invitedByName })),
+        ...requests,
+      ];
+
+      setNotifications(merged as any);
+      setHasUnread(merged.length > 0);
     } catch (error) {
       console.error('Error fetching invitations:', error);
       toast.error('Failed to load notifications');
@@ -39,54 +57,63 @@ export default function NotificationDropdown() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAcceptInvitation = async (notificationId: string) => {
+  const handleAccept = async (notification: Notification) => {
     try {
-      const response = await fetch(`/api/invitations/${notificationId}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ACCEPTED' }),
-      });
+      if (notification.type === 'SERVER_INVITATION') {
+        const response = await fetch(`/api/invitations/${notification.id}/accept`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'ACCEPTED' }),
+        });
+        if (!response.ok) throw new Error('Failed to accept invitation');
+        toast.success('Invitation accepted successfully');
+        // after joining a server it's reasonable to reload so sidebar updates
+        window.location.reload();
+      } else if (notification.type === 'MENTEE_REQUEST') {
+        // Accept mentee request by calling mentor respond endpoint
+        const response = await fetch(`/api/mentor/requests/${notification.id}/respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ACCEPT' }),
+        });
+        if (!response.ok) throw new Error('Failed to accept mentee request');
+        toast.success('Mentee request accepted');
+      }
 
-      if (!response.ok) throw new Error('Failed to accept invitation');
-
-      // Remove the notification
-      setNotifications(prev => 
-        prev.filter(notif => notif.id !== notificationId)
-      );
-      
-      toast.success('Invitation accepted successfully');
-      
-      // Refresh notifications
+      // Remove the notification locally and refresh
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
       fetchInvitations();
-      window.location.reload();
     } catch (error) {
-      console.error('Error accepting invitation:', error);
-      toast.error('Failed to accept invitation');
+      console.error('Error handling accept:', error);
+      toast.error('Failed to accept');
     }
   };
 
-  const handleDeclineInvitation = async (notificationId: string) => {
+  const handleDecline = async (notification: Notification) => {
     try {
-      const response = await fetch(`/api/invitations/${notificationId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DECLINED' }),
-      });
+      if (notification.type === 'SERVER_INVITATION') {
+        const response = await fetch(`/api/invitations/${notification.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'DECLINED' }),
+        });
+        if (!response.ok) throw new Error('Failed to decline invitation');
+        toast.success('Invitation declined');
+      } else if (notification.type === 'MENTEE_REQUEST') {
+        const response = await fetch(`/api/mentor/requests/${notification.id}/respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REJECT' }),
+        });
+        if (!response.ok) throw new Error('Failed to reject mentee request');
+        toast.success('Mentee request rejected');
+      }
 
-      if (!response.ok) throw new Error('Failed to decline invitation');
-
-      // Remove the notification
-      setNotifications(prev => 
-        prev.filter(notif => notif.id !== notificationId)
-      );
-
-      toast.success('Invitation declined');
-      
-      // Refresh notifications
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
       fetchInvitations();
     } catch (error) {
-      console.error('Error declining invitation:', error);
-      toast.error('Failed to decline invitation');
+      console.error('Error handling decline:', error);
+      toast.error('Failed to decline');
     }
   };
 
@@ -122,24 +149,48 @@ export default function NotificationDropdown() {
                   key={notification.id}
                   className="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600"
                 >
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                    Bạn vừa được <span className="font-semibold">{notification.invitedByName}</span> mời 
-                    vào server <span className="font-semibold">{notification.serverName}</span>
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAcceptInvitation(notification.id)}
-                      className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-                    >
-                      Đồng ý
-                    </button>
-                    <button
-                      onClick={() => handleDeclineInvitation(notification.id)}
-                      className="px-3 py-1 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300 text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-500"
-                    >
-                      Từ chối
-                    </button>
-                  </div>
+                  {notification.type === 'SERVER_INVITATION' ? (
+                    <>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        Bạn vừa được <span className="font-semibold">{notification.invitedByName}</span> mời 
+                        vào server <span className="font-semibold">{notification.serverName}</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAccept(notification)}
+                          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                        >
+                          Đồng ý
+                        </button>
+                        <button
+                          onClick={() => handleDecline(notification)}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300 text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+                        >
+                          Từ chối
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        <span className="font-semibold">{notification.menteeName}</span> muốn trở thành mentee của bạn
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAccept(notification)}
+                          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                        >
+                          Đồng ý
+                        </button>
+                        <button
+                          onClick={() => handleDecline(notification)}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300 text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+                        >
+                          Từ chối
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))
             )}

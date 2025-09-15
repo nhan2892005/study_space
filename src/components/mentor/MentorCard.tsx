@@ -63,12 +63,29 @@ export default function MentorCard({ mentor }: MentorCardProps) {
         </div>
 
         <div className="mt-6">
-          <Link
-            href={`/mentor/${mentor.id}`}
-            className="block w-full text-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            View Profile
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/mentor/${mentor.id}`}
+              className="flex-1 text-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              View Profile
+            </Link>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/mentors/${mentor.id}`, { method: 'POST' });
+                  const data = await res.json();
+                  if (res.ok) alert('Request sent');
+                  else alert(data?.error || 'Failed');
+                } catch (err) {
+                  alert('Network error');
+                }
+              }}
+              className="px-3 py-2 bg-green-500 text-white rounded"
+            >
+              Request
+            </button>
+          </div>
         </div>
       </div>
     </div>

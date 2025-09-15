@@ -37,6 +37,14 @@ model User {
   comments  Comment[]
   reactions Reaction[]
 
+  // Reviews (back-relations) — PHẢI trùng tên relation với bên Review
+  givenReviews    Review[] @relation("ReviewReviewer") // reviews user đã viết
+  receivedReviews Review[] @relation("ReviewMentor")   // reviews user nhận được
+
+  // MentorFeedback (back-relations) — PHẢI trùng tên relation với bên MentorFeedback
+  mentorFeedbacksAsMentor  MentorFeedback[] @relation("FeedbackByMentor")
+  mentorFeedbacksAsMentee  MentorFeedback[] @relation("FeedbackForMentee")
+
   // Chat features
   ownedServers    ChatServer[]   @relation("ServerOwner")
   memberOfServers ServerMember[]
@@ -112,6 +120,36 @@ model Reaction {
   createdAt DateTime     @default(now())
 
   @@unique([postId, userId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+
+  reviewer   User     @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+  reviewerId String
+
+  mentor     User     @relation("ReviewMentor", fields: [mentorId], references: [id])
+  mentorId   String
+
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([mentorId])
+}
+
+model MentorFeedback {
+  id        String   @id @default(cuid())
+  mentor    User     @relation("FeedbackByMentor", fields: [mentorId], references: [id])
+  mentorId  String
+  mentee    User     @relation("FeedbackForMentee", fields: [menteeId], references: [id])
+  menteeId  String
+  score     Int?
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([mentorId])
+  @@index([menteeId])
 }
 
 // Chat Models
