@@ -27,7 +27,7 @@ export default function Navbar() {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {NAV_ITEMS.filter(item => {
                 if (!session?.user?.role) return false;
-                return item.roles.includes(session.user.role as any);
+                return item.roles.includes(session.user.role.toLocaleLowerCase() as any);
               }).map((item) => (
                 <Link
                   key={item.href}
