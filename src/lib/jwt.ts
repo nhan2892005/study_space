@@ -16,14 +16,14 @@ export interface JWTPayload {
 }
 
 export function createToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET!, {
     expiresIn: '24h', // Token expires in 24 hours
   });
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET!) as JWTPayload;
     return decoded;
   } catch (error) {
     console.error('JWT verification error:', error);

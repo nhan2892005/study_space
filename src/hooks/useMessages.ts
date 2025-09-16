@@ -118,16 +118,16 @@ export const useMessages = (serverId: string, channelId?: string) => {
     // Set up socket event listeners and collect cleanup functions
     const cleanupFunctions: (() => void)[] = [];
     
-    const newMessageCleanup = onNewMessage(handleNewMessage);
+    const newMessageCleanup = onNewMessage(handleNewMessage) as (() => void) | undefined;
     if (newMessageCleanup) cleanupFunctions.push(newMessageCleanup);
     
-    const errorCleanup = onError(handleError);
+    const errorCleanup = onError(handleError) as (() => void) | undefined;
     if (errorCleanup) cleanupFunctions.push(errorCleanup);
     
-    const typingCleanup = onUserTyping(handleUserTyping);
+    const typingCleanup = onUserTyping(handleUserTyping) as (() => void) | undefined;
     if (typingCleanup) cleanupFunctions.push(typingCleanup);
     
-    const stoppedTypingCleanup = onUserStoppedTyping(handleUserStoppedTyping);
+    const stoppedTypingCleanup = onUserStoppedTyping(handleUserStoppedTyping) as (() => void) | undefined;
     if (stoppedTypingCleanup) cleanupFunctions.push(stoppedTypingCleanup);
 
     return () => {

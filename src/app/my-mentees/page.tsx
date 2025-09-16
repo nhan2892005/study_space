@@ -19,7 +19,6 @@ export default async function MyMenteesPage() {
       <div className="space-y-4">
         {connections.length === 0 ? <div>Chưa có mentee nào</div> : (
           connections.map(c => (
-            // @ts-expect-error serializing
             <MenteeCard key={c.id} connection={c} />
           ))
         )}

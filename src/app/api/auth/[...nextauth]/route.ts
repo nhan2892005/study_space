@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { createToken } from '@/lib/jwt';
+import { UserRole } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -63,7 +64,7 @@ export const authOptions: NextAuthOptions = {
             email: userEmail,
             name: (profile as any)?.name || null,
             image: (profile as any)?.picture || null,
-            role: roleFromUrl || "MENTEE", // Default to MENTEE if no role specified
+            role: (roleFromUrl ?? "MENTEE") as UserRole,
             emailVerified: new Date(),
           },
         });

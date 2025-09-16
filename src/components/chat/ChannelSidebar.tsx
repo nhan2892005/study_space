@@ -205,7 +205,6 @@ export default function ChannelSidebar({ serverId }: Props) {
         isOpen={isCreateModalOpen}
         serverId={serverId}
         onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateChannel}
       />
     </div>
   );

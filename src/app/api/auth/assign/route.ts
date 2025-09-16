@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 
 const ALLOWED = ['MENTEE', 'MENTOR', 'ADMIN'];
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const roleRaw = formData.get('role')?.toString() ?? '';
-    const role = roleRaw.toUpperCase();
+    const role = roleRaw.toUpperCase() as UserRole;  // Cast thành UserRole để type khớp
     if (!ALLOWED.includes(role)) return NextResponse.redirect(new URL('/', req.url));
 
     const session = await getServerSession(authOptions);
@@ -37,12 +38,12 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.upsert({
       where: { email: session.user.email },
-      update: { role },
+      update: { role: { set: role } },  // Sửa ở đây: Dùng { set: role } cho enum update
       create: {
         email: session.user.email,
         name: session.user.name ?? null,
         image: session.user.image ?? null,
-        role,
+        role,  // Ok vì create chấp nhận trực tiếp
       },
     });
 

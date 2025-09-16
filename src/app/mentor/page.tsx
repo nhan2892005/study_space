@@ -29,7 +29,6 @@ export default async function MentorIndex() {
 
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        {/* @ts-expect-error serialized data */}
         <MentorWall mentorData={data} currentUserEmail={session.user.email} />
       </div>
     );

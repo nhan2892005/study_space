@@ -50,7 +50,7 @@ export default function ChatSidebar() {
             onClick={() => handleServerClick(server.id)}
             title={server.name}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all transform hover:scale-110 ${
-              activeServer === server.id
+              activeServer?.id === server.id
                 ? 'bg-blue-600'
                 : 'bg-gray-700 hover:bg-gray-600'
             }`}

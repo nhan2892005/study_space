@@ -2,7 +2,29 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { type Mentor } from '@/data/mentors';
+interface Mentor {
+  id: string;
+  name: string;
+  avatar: string;
+  role: 'lecturer' | 'student';
+  year?: number; // for student mentors
+  department: string;
+  currentMentees: number;
+  maxMentees: number;
+  rating: number;
+  totalReviews: number;
+  availableDays: number;
+  expertise: string[];
+  achievements: string[];
+  contact: {
+    email: string;
+    phone?: string;
+  };
+  schedule: {
+    day: string;
+    times: string[];
+  }[];
+}
 
 interface MentorCardProps {
   mentor: Mentor;
