@@ -1,4 +1,4 @@
-// app/layout.tsx (hoặc layout.js/tsx)
+
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -8,13 +8,13 @@ import Navbar from "@/components/navbar/Navbar";
 import { SocketProvider } from "@/contexts/SocketContext";
 
 const geistSans = localFont({
-  src: "/fonts/Inter-Variable.woff2",
+  src: "../../public/fonts/InterVariable.woff2",
   variable: "--font-geist-sans",
   display: "swap",
 });
 
 const geistMono = localFont({
-  src: "/fonts/Inter-Variable.woff2",
+  src: "../../public/fonts/InterVariable.woff2",
   variable: "--font-geist-mono",
   display: "swap",
 });
