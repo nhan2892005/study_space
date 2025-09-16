@@ -71,7 +71,7 @@ export default async function Home({
   });
 
   // For each mentor, compute current mentees count
-  const mentors = await Promise.all(mentorProfiles.map(async (mp) => {
+  const mentors = await Promise.all(mentorProfiles.map(async (mp:any) => {
     const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });
     return {
       id: mp.userId,

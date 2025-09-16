@@ -50,22 +50,22 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate progress data
-    const categoryScores = progressRecords.reduce((acc, record) => {
+    const categoryScores = progressRecords.reduce((acc:any, record:any) => {
       if (!acc[record.category] || acc[record.category].createdAt < record.createdAt) {
         acc[record.category] = record;
       }
       return acc;
     }, {} as Record<string, any>);
 
-    const progressData = Object.entries(categoryScores).map(([category, record]) => {
+    const progressData = Object.entries(categoryScores).map(([category, record]:[any, any]) => {
       // Get previous score for comparison
-      const previousRecords = progressRecords.filter(r => 
+      const previousRecords = progressRecords.filter((r:any) => 
         r.category === category && r.createdAt < record.createdAt
       );
       const previousScore = previousRecords[0]?.score || 0;
 
       return {
-        category: category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        category: category.replace('_', ' ').replace(/\b\w/g, (l:any) => l.toUpperCase()),
         currentScore: record.score,
         previousScore,
         target: record.maxScore || 100,
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const formattedEvents = events.map(event => ({
+    const formattedEvents = events.map((event:any) => ({
       id: event.id,
       title: event.title,
       startTime: event.startTime.toISOString(),
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       isCompleted: event.isCompleted
     }));
 
-    const formattedFeedback = recentFeedback.map(feedback => ({
+    const formattedFeedback = recentFeedback.map((feedback:any) => ({
       id: feedback.id,
       category: 'General', // You might want to add category to MentorFeedback model
       score: feedback.score || 0,

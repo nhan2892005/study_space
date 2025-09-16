@@ -18,7 +18,7 @@ export default async function MyMenteesPage() {
       <h1 className="text-2xl font-bold mb-4">Danh sách Mentee của tôi</h1>
       <div className="space-y-4">
         {connections.length === 0 ? <div>Chưa có mentee nào</div> : (
-          connections.map(c => (
+          connections.map((c:any) => (
             <MenteeCard key={c.id} connection={c} />
           ))
         )}

@@ -47,7 +47,7 @@ export async function GET(
     });
 
     return NextResponse.json(
-      messages.map(msg => ({
+      messages.map((msg:any) => ({
         id: msg.id,
         content: msg.content,
         type: msg.type,

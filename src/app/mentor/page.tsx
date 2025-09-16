@@ -37,7 +37,7 @@ export default async function MentorIndex() {
   // Otherwise list all mentors
   const mentorProfiles = await prisma.mentorProfile.findMany({ include: { user: { select: { id: true, name: true, image: true, department: true, achievements: true, email: true } } } });
 
-  const mentors = await Promise.all(mentorProfiles.map(async (mp) => {
+  const mentors = await Promise.all(mentorProfiles.map(async (mp:any) => {
     const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });
     return {
       id: mp.userId,

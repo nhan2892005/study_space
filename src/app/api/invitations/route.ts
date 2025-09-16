@@ -31,7 +31,7 @@ export async function GET() {
     });
 
     // Transform the data to match the Notification interface
-    const formattedInvitations = invitations.map(invitation => ({
+    const formattedInvitations = invitations.map((invitation:any) => ({
       id: invitation.id,
       type: 'SERVER_INVITATION',
       serverId: invitation.serverId,

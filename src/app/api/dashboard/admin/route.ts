@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/prisma';
+import type { Review, MentorProfile } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
     // Calculate average rating
     const allReviews = await prisma.review.findMany();
     const averageRating = allReviews.length > 0 
-      ? allReviews.reduce((sum : number, review) => sum + review.rating, 0) / allReviews.length
+      ? allReviews.reduce((sum : number, review : Review) => sum + review.rating, 0) / allReviews.length
       : 0;
 
     // Calculate monthly growth (simplified)
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest) {
       monthlyGrowth: Math.round(monthlyGrowth * 10) / 10
     };
 
-    const formattedMentorStats = mentorStats.map(mentor => ({
+    const formattedMentorStats = mentorStats.map((mentor:any) => ({
       id: mentor.id,
       name: mentor.name || 'Unknown',
       email: mentor.email,

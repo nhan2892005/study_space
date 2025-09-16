@@ -10,7 +10,8 @@
     "start": "concurrently \"npm run start:next\" \"npm run start:socket\"",
     "start:next": "next start",
     "start:socket": "node src/server/socket-server.js",
-    "test": "jest"
+    "test": "jest",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.19",

@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate mentee statistics
-    const menteeStats = mentorConnections.map(connection => {
+    const menteeStats = mentorConnections.map((connection:any) => {
       const mentee = connection.mentee;
       const progressRecords = mentee.progressRecords;
       
       // Group progress by category and get latest scores
-      const categoryScores = progressRecords.reduce((acc, record) => {
+      const categoryScores = progressRecords.reduce((acc:any, record:any) => {
         if (!acc[record.category] || acc[record.category].createdAt < record.createdAt) {
           acc[record.category] = record;
         }
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
       const lastMonth = new Date();
       lastMonth.setMonth(lastMonth.getMonth() - 1);
       
-      const oldRecords = progressRecords.filter(r => r.createdAt <= lastMonth);
-      const oldCategoryScores = oldRecords.reduce((acc, record) => {
+      const oldRecords = progressRecords.filter((r:any) => r.createdAt <= lastMonth);
+      const oldCategoryScores = oldRecords.reduce((acc:any, record:any) => {
         if (!acc[record.category] || acc[record.category].createdAt < record.createdAt) {
           acc[record.category] = record;
         }
