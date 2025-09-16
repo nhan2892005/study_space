@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "concurrently \"npm run start:next\" \"npm run start:socket\"",
     "start:next": "next start",
-    "start:socket": "node src/server/socket-server.js"
+    "start:socket": "node src/server/socket-server.js",
+    "test": "jest"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.19",
@@ -31,16 +32,23 @@
     "zustand": "^4.4.3"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.21",
+    "babel-jest": "^30.1.2",
     "concurrently": "^9.2.1",
+    "jest": "^30.1.3",
     "postcss": "^8.5.6",
     "prisma": "^5.4.1",
     "tailwindcss": "^3.4.17",
+    "ts-jest": "^29.4.2",
     "typescript": "^5"
   }
 }
