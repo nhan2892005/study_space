@@ -1,19 +1,22 @@
+// app/layout.tsx (hoặc layout.js/tsx)
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/providers/Providers";
 import { ServerProvider } from "@/contexts/ServerContext";
 import Navbar from "@/components/navbar/Navbar";
 import { SocketProvider } from "@/contexts/SocketContext";
 
-const geistSans = Inter({
+const geistSans = localFont({
+  src: "/fonts/Inter-Variable.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Inter({
+const geistMono = localFont({
+  src: "/fonts/Inter-Variable.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
           <SocketProvider>
