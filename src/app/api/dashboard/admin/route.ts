@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     // Calculate average rating
     const allReviews = await prisma.review.findMany();
     const averageRating = allReviews.length > 0 
-      ? allReviews.reduce((sum, review) => sum + review.rating, 0) / allReviews.length
+      ? allReviews.reduce((sum : number, review) => sum + review.rating, 0) / allReviews.length
       : 0;
 
     // Calculate monthly growth (simplified)
