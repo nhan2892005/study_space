@@ -3,6 +3,14 @@
 const nextConfig = {
   experimental: {
     serverActions: true,
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Exclude Prisma từ bundle nếu cần, nhưng thường không
+      config.externals = [...(config.externals || []), '@prisma/client'];
+    }
+    return config;
   },
   images: {
     remotePatterns: [
