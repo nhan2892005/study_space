@@ -41,47 +41,47 @@ const MentorDashboard = () => {
 
   // Mock data
   useEffect(() => {
-    const mockMenteeStats: MenteeStats[] = [
-      {
-        id: '1',
-        name: 'Nguyễn Văn A',
-        avatar: '/api/placeholder/40/40',
-        overallScore: 78,
-        improvement: +12,
-        lastActivity: '2 giờ trước',
-        categories: { coding: 85, communication: 72, project: 68, problem: 78, teamwork: 80 },
-      },
-      {
-        id: '2',
-        name: 'Trần Thị B',
-        avatar: '/api/placeholder/40/40',
-        overallScore: 82,
-        improvement: +8,
-        lastActivity: '1 ngày trước',
-        categories: { coding: 88, communication: 85, project: 75, problem: 82, teamwork: 85 },
-      },
-      {
-        id: '3',
-        name: 'Lê Văn C',
-        avatar: '/api/placeholder/40/40',
-        overallScore: 65,
-        improvement: -3,
-        lastActivity: '3 ngày trước',
-        categories: { coding: 68, communication: 62, project: 60, problem: 65, teamwork: 70 },
-      },
-      {
-        id: '4',
-        name: 'Phạm Thị D',
-        avatar: '/api/placeholder/40/40',
-        overallScore: 89,
-        improvement: +15,
-        lastActivity: '5 giờ trước',
-        categories: { coding: 92, communication: 88, project: 85, problem: 90, teamwork: 87 },
-      },
-    ];
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/dashboard/mentor');
+        if (!res.ok) throw new Error(`Failed to fetch mentor dashboard: ${res.status}`);
+        const data = await res.json();
+        if (!mounted) return;
 
-    setMenteeStats(mockMenteeStats);
-    setLoading(false);
+        // Map menteeStats — API should return menteeStats array; fallback to empty
+        const mentees: MenteeStats[] = (data.menteeStats || []).map((m: any) => ({
+          id: m.id,
+          name: m.name || 'Unknown',
+          avatar: m.avatar || m.image || '/api/placeholder/40/40',
+          overallScore: typeof m.overallScore === 'number' ? m.overallScore : Math.round((m.categories?.coding || 0 + m.categories?.communication || 0 + m.categories?.project || 0 + m.categories?.problem || 0 + m.categories?.teamwork || 0) / 5),
+          improvement: typeof m.improvement === 'number' ? m.improvement : 0,
+          lastActivity: m.lastActivity || (m.updatedAt ? new Date(m.updatedAt).toLocaleString() : ''),
+          categories: {
+            coding: m.categories?.coding || 0,
+            communication: m.categories?.communication || 0,
+            project: m.categories?.project || m.categories?.project_management || 0,
+            problem: m.categories?.problem || m.categories?.problem_solving || 0,
+            teamwork: m.categories?.teamwork || 0,
+          }
+        }));
+
+        setMenteeStats(mentees);
+
+        // Optionally map analytics arrays if provided
+        if (data.monthlyProgressData) {
+          // replace local const via state? currently monthlyProgressData is const — keep local fallback
+        }
+      } catch (err) {
+        console.error('Error loading mentor dashboard:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   }, []);
 
   const monthlyProgressData = [

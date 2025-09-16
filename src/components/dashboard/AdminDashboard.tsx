@@ -42,104 +42,29 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - replace with actual API calls
-    const mockSystemStats: SystemStats = {
-      totalUsers: 1247,
-      totalMentors: 89,
-      totalMentees: 1158,
-      activeConnections: 342,
-      averageRating: 4.6,
-      monthlyGrowth: 12.5,
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/dashboard/admin');
+        if (!res.ok) {
+          throw new Error(`Failed to fetch admin dashboard: ${res.status}`);
+        }
+        const data = await res.json();
+        if (!mounted) return;
+        setSystemStats(data.systemStats || null);
+        setMentorStats(data.mentorStats || []);
+        setActivityData(data.activityData || []);
+      } catch (err) {
+        console.error('Error loading admin dashboard:', err);
+        // keep existing state as empty/null
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
-    const mockMentorStats: MentorStats[] = [
-      {
-        id: '1',
-        name: 'Dr. Nguyễn Văn A',
-        email: 'nguyenvana@email.com',
-        department: 'Khoa học máy tính',
-        menteeCount: 5,
-        averageRating: 4.8,
-        totalReviews: 23,
-        joinDate: '2024-01-15',
-        status: 'active',
-        completedSessions: 145,
-      },
-      {
-        id: '2',
-        name: 'Dr. Trần Thị B',
-        email: 'tranthib@email.com',
-        department: 'Công nghệ thông tin',
-        menteeCount: 4,
-        averageRating: 4.5,
-        totalReviews: 18,
-        joinDate: '2024-02-20',
-        status: 'active',
-        completedSessions: 98,
-      },
-      {
-        id: '3',
-        name: 'MSc. Lê Văn C',
-        email: 'levanc@email.com',
-        department: 'Kỹ thuật phần mềm',
-        menteeCount: 3,
-        averageRating: 4.2,
-        totalReviews: 12,
-        joinDate: '2024-03-10',
-        status: 'pending',
-        completedSessions: 45,
-      },
-      {
-        id: '4',
-        name: 'Dr. Phạm Thị D',
-        email: 'phamthid@email.com',
-        department: 'Trí tuệ nhân tạo',
-        menteeCount: 5,
-        averageRating: 4.9,
-        totalReviews: 31,
-        joinDate: '2023-11-05',
-        status: 'active',
-        completedSessions: 203,
-      },
-    ];
-
-    const mockActivityData: PlatformActivity[] = [
-      { date: '2025-08-17', newUsers: 12, sessions: 89, messages: 245, reviews: 8 },
-      { date: '2025-08-18', newUsers: 15, sessions: 95, messages: 278, reviews: 12 },
-      { date: '2025-08-19', newUsers: 8, sessions: 76, messages: 198, reviews: 6 },
-      { date: '2025-08-20', newUsers: 22, sessions: 112, messages: 334, reviews: 15 },
-      { date: '2025-08-21', newUsers: 18, sessions: 104, messages: 289, reviews: 11 },
-      { date: '2025-08-22', newUsers: 9, sessions: 67, messages: 156, reviews: 4 },
-      { date: '2025-08-23', newUsers: 14, sessions: 88, messages: 234, reviews: 9 },
-      { date: '2025-08-24', newUsers: 25, sessions: 118, messages: 367, reviews: 18 },
-      { date: '2025-08-25', newUsers: 19, sessions: 102, messages: 298, reviews: 13 },
-      { date: '2025-08-26', newUsers: 16, sessions: 94, messages: 267, reviews: 10 },
-      { date: '2025-08-27', newUsers: 21, sessions: 109, messages: 321, reviews: 16 },
-      { date: '2025-08-28', newUsers: 13, sessions: 85, messages: 223, reviews: 7 },
-      { date: '2025-08-29', newUsers: 17, sessions: 97, messages: 276, reviews: 12 },
-      { date: '2025-08-30', newUsers: 20, sessions: 106, messages: 312, reviews: 14 },
-      { date: '2025-09-01', newUsers: 24, sessions: 115, messages: 345, reviews: 17 },
-      { date: '2025-09-02', newUsers: 11, sessions: 78, messages: 189, reviews: 5 },
-      { date: '2025-09-03', newUsers: 26, sessions: 121, messages: 378, reviews: 19 },
-      { date: '2025-09-04', newUsers: 15, sessions: 91, messages: 256, reviews: 9 },
-      { date: '2025-09-05', newUsers: 23, sessions: 113, messages: 334, reviews: 16 },
-      { date: '2025-09-06', newUsers: 18, sessions: 99, messages: 287, reviews: 11 },
-      { date: '2025-09-07', newUsers: 12, sessions: 82, messages: 209, reviews: 6 },
-      { date: '2025-09-08', newUsers: 28, sessions: 125, messages: 389, reviews: 21 },
-      { date: '2025-09-09', newUsers: 16, sessions: 93, messages: 264, reviews: 10 },
-      { date: '2025-09-10', newUsers: 22, sessions: 108, messages: 318, reviews: 15 },
-      { date: '2025-09-11', newUsers: 19, sessions: 101, messages: 293, reviews: 12 },
-      { date: '2025-09-12', newUsers: 14, sessions: 87, messages: 231, reviews: 8 },
-      { date: '2025-09-13', newUsers: 27, sessions: 119, messages: 356, reviews: 18 },
-      { date: '2025-09-14', newUsers: 21, sessions: 105, messages: 309, reviews: 14 },
-      { date: '2025-09-15', newUsers: 17, sessions: 96, messages: 273, reviews: 11 },
-      { date: '2025-09-16', newUsers: 25, sessions: 116, messages: 341, reviews: 17 },
-    ];
-
-    setSystemStats(mockSystemStats);
-    setMentorStats(mockMentorStats);
-    setActivityData(mockActivityData);
-    setLoading(false);
+    load();
+    return () => { mounted = false; };
   }, []);
 
   const departmentData = [

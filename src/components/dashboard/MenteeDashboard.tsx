@@ -39,67 +39,81 @@ const MenteeDashboard = () => {
 
   // Mock data - replace with actual API calls
   useEffect(() => {
-    const mockProgressData: ProgressData[] = [
-      { category: 'Coding Skills', currentScore: 85, previousScore: 78, target: 90, color: '#3B82F6' },
-      { category: 'Communication', currentScore: 72, previousScore: 68, target: 80, color: '#10B981' },
-      { category: 'Project Management', currentScore: 68, previousScore: 65, target: 75, color: '#F59E0B' },
-      { category: 'Problem Solving', currentScore: 78, previousScore: 70, target: 85, color: '#8B5CF6' },
-      { category: 'Teamwork', currentScore: 80, previousScore: 75, target: 85, color: '#EF4444' },
-    ];
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/dashboard/mentee');
+        if (!res.ok) throw new Error(`Failed to fetch mentee dashboard: ${res.status}`);
+        const data = await res.json();
+        if (!mounted) return;
 
-    const mockEvents: CalendarEvent[] = [
-      {
-        id: '1',
-        title: 'JavaScript Assignment Due',
-        startTime: '2025-09-17T10:00:00',
-        endTime: '2025-09-17T11:00:00',
-        type: 'DEADLINE',
-        priority: 'HIGH',
-        isCompleted: false,
-      },
-      {
-        id: '2',
-        title: 'Weekly Mentor Meeting',
-        startTime: '2025-09-18T14:00:00',
-        endTime: '2025-09-18T15:00:00',
-        type: 'MEETING',
-        priority: 'MEDIUM',
-        isCompleted: false,
-      },
-      {
-        id: '3',
-        title: 'Code Review Session',
-        startTime: '2025-09-19T09:00:00',
-        endTime: '2025-09-19T10:30:00',
-        type: 'MEETING',
-        priority: 'MEDIUM',
-        isCompleted: false,
-      },
-    ];
+        // Map progress records
+        const progress: ProgressData[] = (data.progressData || []).map((p: any) => ({
+          category: p.category || p.name || 'General',
+          currentScore: p.currentScore ?? p.score ?? 0,
+          previousScore: p.previousScore ?? 0,
+          target: p.target ?? p.maxScore ?? 100,
+          color: p.color || '#3B82F6'
+        }));
 
-    const mockFeedback: RecentFeedback[] = [
-      {
-        id: '1',
-        category: 'Coding Skills',
-        score: 85,
-        comment: 'Great improvement in React components. Keep practicing state management.',
-        date: '2025-09-15',
-        mentorName: 'Dr. Nguyễn Văn A',
-      },
-      {
-        id: '2',
-        category: 'Communication',
-        score: 72,
-        comment: 'Good progress in presentation skills. Work on technical explanations.',
-        date: '2025-09-14',
-        mentorName: 'Dr. Nguyễn Văn A',
-      },
-    ];
+        const events: CalendarEvent[] = (data.events || []).map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          type: e.type,
+          priority: e.priority,
+          isCompleted: !!e.isCompleted,
+        }));
 
-    setProgressData(mockProgressData);
-    setEvents(mockEvents);
-    setRecentFeedback(mockFeedback);
-    setLoading(false);
+        const feedback: RecentFeedback[] = (data.recentFeedback || []).map((f: any) => ({
+          id: f.id,
+          category: f.category || 'General',
+          score: f.score ?? 0,
+          comment: f.comment || '',
+          date: f.date || (f.createdAt ? new Date(f.createdAt).toISOString().split('T')[0] : ''),
+          mentorName: f.mentorName || f.mentor?.name || 'Unknown'
+        }));
+
+        setProgressData(progress);
+        setEvents(events);
+        setRecentFeedback(feedback);
+        // also fetch assigned tasks (created or assigned)
+        try {
+          const t = await fetch('/api/tasks');
+          if (t.ok) {
+            const td = await t.json();
+            const assigned = td.assigned || td.assignedEvents || td.assigned || [];
+            // merge assigned events into events list if not already present
+            const assignedEvents = (assigned || []).map((a: any) => {
+              const ev = a.event || a;
+              return {
+                id: ev.id,
+                title: ev.title,
+                startTime: ev.startTime,
+                endTime: ev.endTime,
+                type: ev.type,
+                priority: ev.priority,
+                isCompleted: ev.isCompleted
+              };
+            });
+
+            // append unique assigned events
+            const merged = [...events];
+            assignedEvents.forEach((ae: any) => { if (!merged.find((x: any) => x.id === ae.id)) merged.push(ae); });
+            setEvents(merged.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
+          }
+        } catch (e) { /* ignore */ }
+      } catch (err) {
+        console.error('Error loading mentee dashboard:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   }, []);
 
   const timeSeriesData = [
