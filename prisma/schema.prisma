@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -37,11 +34,11 @@ model User {
   comments  Comment[]
   reactions Reaction[]
 
-  // Reviews (back-relations) — PHẢI trùng tên relation với bên Review
-  givenReviews    Review[] @relation("ReviewReviewer") // reviews user đã viết
-  receivedReviews Review[] @relation("ReviewMentor")   // reviews user nhận được
+  // Reviews (back-relations)
+  givenReviews    Review[] @relation("ReviewReviewer")
+  receivedReviews Review[] @relation("ReviewMentor")
 
-  // MentorFeedback (back-relations) — PHẢI trùng tên relation với bên MentorFeedback
+  // MentorFeedback (back-relations)
   mentorFeedbacksAsMentor  MentorFeedback[] @relation("FeedbackByMentor")
   mentorFeedbacksAsMentee  MentorFeedback[] @relation("FeedbackForMentee")
 
@@ -49,11 +46,17 @@ model User {
   ownedServers    ChatServer[]   @relation("ServerOwner")
   memberOfServers ServerMember[]
   messages        Message[]
-  // Server invitations
   receivedInvitations ServerInvitation[] @relation("InvitedUser")
   sentInvitations     ServerInvitation[] @relation("InvitedBy")
 
   recordings Recording[]
+
+  // NEW: Calendar & Analytics features
+  createdEvents      CalendarEvent[] @relation("EventCreator")
+  assignedEvents     EventAssignment[]
+  notifications      Notification[]
+  progressRecords    ProgressRecord[]
+  analyticsViews     AnalyticsView[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -65,9 +68,9 @@ model MentorProfile {
   userId        String   @unique
   rating        Float    @default(0)
   totalReviews  Int      @default(0)
-  expertise     String[] // Các lĩnh vực chuyên môn
+  expertise     String[]
   maxMentees    Int      @default(5)
-  availableDays String[] // Các ngày có thể dạy
+  availableDays String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,6 +90,123 @@ model MenteeConnection {
   @@unique([menteeId, mentorId])
 }
 
+// NEW: Calendar Event System
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  type        EventType @default(PERSONAL)
+  priority    Priority  @default(MEDIUM)
+  location    String?
+  isCompleted Boolean   @default(false)
+  
+  creator     User      @relation("EventCreator", fields: [creatorId], references: [id])
+  creatorId   String
+  
+  assignments EventAssignment[]
+  reminders   EventReminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([startTime])
+}
+
+model EventAssignment {
+  id      String        @id @default(cuid())
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+  user    User          @relation(fields: [userId], references: [id])
+  userId  String
+  status  EventStatus   @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model EventReminder {
+  id            String        @id @default(cuid())
+  event         CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       String
+  reminderTime  DateTime
+  message       String?
+  isActive      Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([reminderTime])
+}
+
+// NEW: Enhanced Notification System
+model Notification {
+  id       String           @id @default(cuid())
+  type     NotificationType
+  title    String
+  content  String
+  data     Json? // Additional data for different notification types
+  isRead   Boolean          @default(false)
+  
+  user     User             @relation(fields: [userId], references: [id])
+  userId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// NEW: Progress Tracking System
+model ProgressRecord {
+  id          String      @id @default(cuid())
+  mentee      User        @relation(fields: [menteeId], references: [id])
+  menteeId    String
+  category    String      // e.g., "coding", "communication", "project_management"
+  subcategory String?     // e.g., "javascript", "presentation_skills"
+  score       Float       // 0-100 scale
+  maxScore    Float       @default(100)
+  notes       String?
+  attachments String[]    // URLs to files/screenshots
+  
+  // Metadata for tracking
+  recordedBy  String      // User ID of who recorded this (usually mentor)
+  recordType  RecordType  @default(MANUAL)
+  tags        String[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([menteeId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+// NEW: Analytics Views for Dashboard
+model AnalyticsView {
+  id         String        @id @default(cuid())
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String
+  viewType   AnalyticsType
+  filters    Json? // Store filter configurations
+  chartType  String        // "line", "bar", "pie", "area", etc.
+  isDefault  Boolean       @default(false)
+  position   Int           @default(0) // For ordering in dashboard
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Existing models remain the same...
 model Post {
   id        String     @id @default(cuid())
   content   String     @db.Text
@@ -124,13 +244,10 @@ model Reaction {
 
 model Review {
   id         String   @id @default(cuid())
-
   reviewer   User     @relation("ReviewReviewer", fields: [reviewerId], references: [id])
   reviewerId String
-
   mentor     User     @relation("ReviewMentor", fields: [mentorId], references: [id])
   mentorId   String
-
   rating     Int
   comment    String?
   createdAt  DateTime @default(now())
@@ -250,7 +367,7 @@ model Recording {
   title       String
   description String?
   url         String
-  duration    Int // Duration in seconds
+  duration    Int
   thumbnail   String?
   channel     Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   channelId   String
@@ -261,6 +378,59 @@ model Recording {
   updatedAt DateTime @updatedAt
 }
 
+// NEW ENUMS
+enum EventType {
+  PERSONAL
+  DEADLINE
+  MEETING
+  ASSIGNMENT
+  REMINDER
+  CLASS
+  EXAM
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EventStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+}
+
+enum NotificationType {
+  SERVER_INVITATION
+  MENTEE_REQUEST
+  EVENT_ASSIGNMENT
+  EVENT_REMINDER
+  PROGRESS_UPDATE
+  SYSTEM_ANNOUNCEMENT
+  REVIEW_REMINDER
+}
+
+enum RecordType {
+  MANUAL
+  AUTOMATIC
+  PEER_REVIEW
+  SELF_ASSESSMENT
+}
+
+enum AnalyticsType {
+  PROGRESS_OVERVIEW
+  CATEGORY_BREAKDOWN
+  TIME_SERIES
+  COMPARISON
+  MENTEE_STATISTICS
+  MENTOR_STATISTICS
+  SYSTEM_OVERVIEW
+}
+
+// EXISTING ENUMS
 enum MessageType {
   TEXT
   FILE

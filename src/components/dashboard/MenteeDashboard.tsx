@@ -1,0 +1,404 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, TrendingUp, Target, BookOpen, Star, Bell, Plus } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+interface ProgressData {
+  category: string;
+  currentScore: number;
+  previousScore: number;
+  target: number;
+  color: string;
+}
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  priority: string;
+  isCompleted: boolean;
+}
+
+interface RecentFeedback {
+  id: string;
+  category: string;
+  score: number;
+  comment: string;
+  date: string;
+  mentorName: string;
+}
+
+const MenteeDashboard = () => {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [progressData, setProgressData] = useState<ProgressData[]>([]);
+  const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Mock data - replace with actual API calls
+  useEffect(() => {
+    const mockProgressData: ProgressData[] = [
+      { category: 'Coding Skills', currentScore: 85, previousScore: 78, target: 90, color: '#3B82F6' },
+      { category: 'Communication', currentScore: 72, previousScore: 68, target: 80, color: '#10B981' },
+      { category: 'Project Management', currentScore: 68, previousScore: 65, target: 75, color: '#F59E0B' },
+      { category: 'Problem Solving', currentScore: 78, previousScore: 70, target: 85, color: '#8B5CF6' },
+      { category: 'Teamwork', currentScore: 80, previousScore: 75, target: 85, color: '#EF4444' },
+    ];
+
+    const mockEvents: CalendarEvent[] = [
+      {
+        id: '1',
+        title: 'JavaScript Assignment Due',
+        startTime: '2025-09-17T10:00:00',
+        endTime: '2025-09-17T11:00:00',
+        type: 'DEADLINE',
+        priority: 'HIGH',
+        isCompleted: false,
+      },
+      {
+        id: '2',
+        title: 'Weekly Mentor Meeting',
+        startTime: '2025-09-18T14:00:00',
+        endTime: '2025-09-18T15:00:00',
+        type: 'MEETING',
+        priority: 'MEDIUM',
+        isCompleted: false,
+      },
+      {
+        id: '3',
+        title: 'Code Review Session',
+        startTime: '2025-09-19T09:00:00',
+        endTime: '2025-09-19T10:30:00',
+        type: 'MEETING',
+        priority: 'MEDIUM',
+        isCompleted: false,
+      },
+    ];
+
+    const mockFeedback: RecentFeedback[] = [
+      {
+        id: '1',
+        category: 'Coding Skills',
+        score: 85,
+        comment: 'Great improvement in React components. Keep practicing state management.',
+        date: '2025-09-15',
+        mentorName: 'Dr. Nguyễn Văn A',
+      },
+      {
+        id: '2',
+        category: 'Communication',
+        score: 72,
+        comment: 'Good progress in presentation skills. Work on technical explanations.',
+        date: '2025-09-14',
+        mentorName: 'Dr. Nguyễn Văn A',
+      },
+    ];
+
+    setProgressData(mockProgressData);
+    setEvents(mockEvents);
+    setRecentFeedback(mockFeedback);
+    setLoading(false);
+  }, []);
+
+  const timeSeriesData = [
+    { month: 'T1', coding: 65, communication: 60, project: 55, problem: 62, teamwork: 70 },
+    { month: 'T2', coding: 68, communication: 62, project: 58, problem: 65, teamwork: 72 },
+    { month: 'T3', coding: 72, communication: 65, project: 60, problem: 68, teamwork: 74 },
+    { month: 'T4', coding: 75, communication: 67, project: 62, problem: 70, teamwork: 76 },
+    { month: 'T5', coding: 78, communication: 68, project: 65, problem: 70, teamwork: 75 },
+    { month: 'T6', coding: 82, communication: 70, project: 66, problem: 75, teamwork: 78 },
+    { month: 'T7', coding: 85, communication: 72, project: 68, problem: 78, teamwork: 80 },
+  ];
+
+  const radarData = progressData.map(item => ({
+    subject: item.category.replace(' ', '\n'),
+    current: item.currentScore,
+    target: item.target,
+  }));
+
+  const priorityColors = {
+    LOW: 'bg-gray-100 text-gray-800',
+    MEDIUM: 'bg-yellow-100 text-yellow-800',
+    HIGH: 'bg-red-100 text-red-800',
+    URGENT: 'bg-red-200 text-red-900',
+  };
+
+  const typeIcons = {
+    DEADLINE: <Clock className="h-4 w-4" />,
+    MEETING: <Calendar className="h-4 w-4" />,
+    ASSIGNMENT: <BookOpen className="h-4 w-4" />,
+    EXAM: <Target className="h-4 w-4" />,
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Theo dõi tiến trình học tập của bạn</p>
+          </div>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Thêm sự kiện
+          </button>
+        </div>
+
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Điểm trung bình</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">76.6</p>
+                <p className="text-xs text-green-600 dark:text-green-400">+4.2 từ tháng trước</p>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Deadline sắp tới</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{events.filter(e => !e.isCompleted).length}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">2 trong tuần này</p>
+              </div>
+              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
+                <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Hoạt động hoàn thành</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">12</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Tháng này</p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Đánh giá gần đây</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">4.2</p>
+                <p className="text-xs text-green-600 dark:text-green-400">⭐ Xuất sắc</p>
+              </div>
+              <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-full">
+                <Star className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Calendar & Events */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Upcoming Events */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sự kiện sắp tới</h2>
+                <Bell className="h-5 w-5 text-gray-400" />
+              </div>
+              <div className="space-y-3">
+                {events.slice(0, 5).map((event) => (
+                  <div key={event.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
+                    <div className="flex-shrink-0 mt-1">
+                      {typeIcons[event.type as keyof typeof typeIcons]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {event.title}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(event.startTime).toLocaleDateString('vi-VN', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityColors[event.priority as keyof typeof priorityColors]}`}>
+                      {event.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Feedback */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Phản hồi gần đây</h2>
+              <div className="space-y-4">
+                {recentFeedback.map((feedback) => (
+                  <div key={feedback.id} className="border-l-4 border-blue-500 pl-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">{feedback.category}</h3>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-lg font-bold text-blue-600">{feedback.score}</span>
+                        <span className="text-sm text-gray-500">/100</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{feedback.comment}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">bởi {feedback.mentorName}</p>
+                      <p className="text-xs text-gray-500">{feedback.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Analytics */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Progress Radar Chart */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tổng quan kỹ năng</h2>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
+                    <Radar name="Hiện tại" dataKey="current" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                    <Radar name="Mục tiêu" dataKey="target" stroke="#10B981" fill="transparent" strokeDasharray="5 5" />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Progress Timeline */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tiến trình theo thời gian</h2>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={timeSeriesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="coding" stroke="#3B82F6" strokeWidth={2} name="Coding" />
+                    <Line type="monotone" dataKey="communication" stroke="#10B981" strokeWidth={2} name="Communication" />
+                    <Line type="monotone" dataKey="project" stroke="#F59E0B" strokeWidth={2} name="Project Mgmt" />
+                    <Line type="monotone" dataKey="problem" stroke="#8B5CF6" strokeWidth={2} name="Problem Solving" />
+                    <Line type="monotone" dataKey="teamwork" stroke="#EF4444" strokeWidth={2} name="Teamwork" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Category Progress Bars */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Chi tiết từng kỹ năng</h2>
+              <div className="space-y-4">
+                {progressData.map((item) => (
+                  <div key={item.category}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{item.category}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.currentScore}/{item.target}
+                        </span>
+                        <span className={`text-xs ${item.currentScore > item.previousScore ? 'text-green-600' : 'text-red-600'}`}>
+                          {item.currentScore > item.previousScore ? '+' : ''}{item.currentScore - item.previousScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                      <div 
+                        className="h-2.5 rounded-full relative"
+                        style={{ 
+                          width: `${(item.currentScore / item.target) * 100}%`,
+                          backgroundColor: item.color 
+                        }}
+                      >
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-xs text-gray-500">0</span>
+                      <span className="text-xs text-gray-500">{item.target}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievement Summary */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thành tích gần đây</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <div className="bg-green-500 p-2 rounded-full">
+                    <Target className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100">Hoàn thành dự án React</p>
+                    <p className="text-xs text-green-600 dark:text-green-400">2 ngày trước</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="bg-blue-500 p-2 rounded-full">
+                    <BookOpen className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Cải thiện điểm JS</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">1 tuần trước</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <div className="bg-purple-500 p-2 rounded-full">
+                    <Star className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-purple-900 dark:text-purple-100">Đạt mục tiêu tháng</p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400">1 tuần trước</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <div className="bg-yellow-500 p-2 rounded-full">
+                    <TrendingUp className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Streak 7 ngày</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">Đang diễn ra</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MenteeDashboard;
