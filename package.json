@@ -7,7 +7,7 @@
     "dev:next": "next dev",
     "dev:socket": "node src/server/socket-server.js",
     "build": "next build",
-    "start": "node src/server/index.js",
+    "start": "next start",
     "start:next": "next start",
     "start:socket": "node src/server/socket-server.js",
     "test": "jest",
