@@ -166,12 +166,20 @@ export default function ChatInterface({ conversationId: initialConvId }: ChatInt
               }
             } catch (e) {
               console.error('Parse error:', e);
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg.role === 'model' && !lastMsg.content) {
+                  lastMsg.content = 'Xin lỗi, đã có lỗi xảy ra.';
+                }
+                return newMessages;
+              });
             }
           }
         }
       }
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
+      if (error) {
         console.error('Stream error:', error);
         setMessages(prev => {
           const newMessages = [...prev];
@@ -212,7 +220,7 @@ export default function ChatInterface({ conversationId: initialConvId }: ChatInt
             <h2 className="font-semibold text-white flex items-center gap-2">
               Study Space AI Assistant
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                Powered by Gemini
+                Powered by Phúc Nhân
               </span>
             </h2>
             <p className="text-sm text-white/90">

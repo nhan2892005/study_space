@@ -1,6 +1,6 @@
 // src/lib/rag/vectorStore.ts
 import { Pinecone } from '@pinecone-database/pinecone';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -8,20 +8,26 @@ export class VectorStore {
   private pinecone: Pinecone;
   private indexName: string;
   private embeddingModel: any;
+  private embeddingDimension: number;
 
   constructor() {
     this.pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY!,
     });
     this.indexName = process.env.PINECONE_INDEX_NAME || 'study-space-rag';
-    // Gemini embedding model (outputs 768-dimensional vectors)
-    this.embeddingModel = genAI.getGenerativeModel({ model: 'embedding-001' });
+    this.embeddingDimension = parseInt(process.env.EMBEDDING_DIMENSION || '1024');
+    this.embeddingModel = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
   }
 
   // Tạo embedding bằng Gemini
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const result = await this.embeddingModel.embedContent(text);
+      const result = await this.embeddingModel.embedContent({
+        content: { parts: [{ text }] },
+        taskType: TaskType.RETRIEVAL_DOCUMENT, // Hoặc RETRIEVAL_QUERY cho query
+        outputDimensionality: this.embeddingDimension, // ✅ SET DIMENSION Ở ĐÂY
+      });
+      
       return result.embedding.values;
     } catch (error) {
       console.error('Embedding error:', error);
