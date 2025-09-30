@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       orderBy: { createdAt: 'asc' },
       take: 10,
     });
-    conversationHistory = messages.map(msg => ({
+    conversationHistory = messages.map((msg:any) => ({
       role: msg.role,
       parts: msg.content,
     }));
