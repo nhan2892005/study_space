@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         take: 10,
       });
 
-      conversationHistory = messages.map(msg => ({
+      conversationHistory = messages.map((msg:any) => ({
         role: msg.role as 'user' | 'model',
         parts: msg.content,
       }));

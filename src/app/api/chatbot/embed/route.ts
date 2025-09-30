@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      documents.push(...mentors.map(mentor => {
+      documents.push(...mentors.map((mentor:any) => {
         const reviews = mentor.receivedReviews
-          .map(r => `"${r.comment}" - ${r.reviewer.name}`)
+          .map((r:any) => `"${r.comment}" - ${r.reviewer.name}`)
           .join('\n');
 
         return {
@@ -76,9 +76,9 @@ ${reviews || 'Chưa có đánh giá'}`,
         },
       });
 
-      documents.push(...posts.map(post => {
+      documents.push(...posts.map((post:any) => {
         const comments = post.comments
-          .map(c => `${c.author.name}: ${c.content}`)
+          .map((c:any) => `${c.author.name}: ${c.content}`)
           .join('\n');
 
         return {

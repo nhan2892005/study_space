@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      conversations: conversations.map(conv => ({
+      conversations: conversations.map((conv:any) => ({
         id: conv.id,
         title: conv.title,
         messageCount: conv._count.messages,
