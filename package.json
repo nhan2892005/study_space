@@ -12,7 +12,9 @@
     "start:socket": "node src/server/socket-server.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^1.7.19",
+    "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^5.4.1",
     "cloudinary": "^2.7.0",
     "jsonwebtoken": "^9.0.2",
