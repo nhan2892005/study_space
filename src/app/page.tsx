@@ -200,7 +200,7 @@ export default async function Home({
                 width={16}
                 height={16}
               />
-              © 2024 Phuc Nhan.
+              © 2025 Phuc Nhan.
             </a>
           </div>
         </div>

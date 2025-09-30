@@ -7,7 +7,8 @@ export const ROUTES = {
   MENTORS: '/mentor',
   MY_MENTEES: '/my-mentees',
   DASHBOARD: '/dashboard',
-  ASSISTANT: '/assistchat',
+  ASSISTANT: '/chatbot',
+  MANAGE_RAG: '/admin/rag',
   SETTINGS: {
     PROFILE: '/settings/profile',
     LANGUAGE: '/settings/language',
@@ -33,6 +34,11 @@ export const NAV_ITEMS: NavigationItem[] = [
     roles: ['MENTEE', 'MENTOR'],
   },
   {
+    label: 'Chat bot',
+    href: ROUTES.ASSISTANT,
+    roles: ['MENTEE', 'MENTOR'],
+  },
+  {
     label: 'Danh sách mentee của tôi',
     href: ROUTES.MY_MENTEES,
     roles: ['MENTOR'],
@@ -46,6 +52,11 @@ export const NAV_ITEMS: NavigationItem[] = [
     label: 'Bảng điều khiển',
     href: ROUTES.DASHBOARD,
     roles: ['MENTEE', 'MENTOR', 'ADMIN'],
+  },
+  {
+    label: 'Quản lý chat bot',
+    href: ROUTES.MANAGE_RAG,
+    roles: ['ADMIN'],
   },
 ];
 
