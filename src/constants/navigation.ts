@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavigationItem[] = [
   {
     label: 'Chat bot',
     href: ROUTES.ASSISTANT,
-    roles: ['MENTEE', 'MENTOR'],
+    roles: ['mentee', 'mentor'],
   },
   {
     label: 'Danh sách mentee của tôi',
@@ -56,7 +56,7 @@ export const NAV_ITEMS: NavigationItem[] = [
   {
     label: 'Quản lý chat bot',
     href: ROUTES.MANAGE_RAG,
-    roles: ['ADMIN'],
+    roles: ['admin'],
   },
 ];
 
