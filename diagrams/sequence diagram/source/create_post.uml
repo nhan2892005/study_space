@@ -1,0 +1,49 @@
+@startuml
+title Create Post Flow
+
+actor User
+participant Browser
+participant "CreatePost Component" as CreatePost
+participant "Cloudinary Service" as Cloudinary
+participant "PostController" as PostController
+participant "Auth Service" as AuthService
+participant "PostService" as PostService
+participant Database
+
+activate User
+activate Browser
+User -> Browser: Enter content + select images
+
+Browser --> CreatePost: Update local state
+activate CreatePost
+User -> Browser: Click "Post"
+Browser --> CreatePost: Validate input
+deactivate CreatePost
+Browser -> Cloudinary: Upload images
+activate Cloudinary
+Cloudinary -> Browser: Return image URLs
+deactivate Cloudinary
+Browser -> PostController: POST /api/posts {content, images}
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: User data
+deactivate AuthService
+PostController -> PostService: Post data + User data
+activate PostService
+PostService -> Database: Create post record
+activate Database
+Database -> PostService: Post created
+deactivate Database
+PostService -> PostController: Return post data
+deactivate PostService
+PostController -> Browser: Return code 200, create post successfully
+deactivate PostController
+Browser -> Browser: router.refresh()
+Browser -> Database: Fetch updated posts
+activate Database
+Database -> Browser: Posts list
+deactivate Database
+Browser -> User: Re-render with new post
+
+@enduml

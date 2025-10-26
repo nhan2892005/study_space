@@ -1,0 +1,51 @@
+@startuml
+title Select a Match Mentor - Send Connection Request Flow
+
+actor Mentee
+participant Browser
+participant "PostController" as PostController
+participant "Auth Service" as AuthService
+participant Database
+participant "Notification System" as NotificationSystem
+
+activate Mentee
+activate Browser
+
+
+Mentee -> Browser: Click "Request" button
+
+Browser -> Mentee: Show confirmation
+
+Mentee -> Browser: Confirm request
+
+
+Browser -> PostController: POST /api/mentors/[mentorId]
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: Mentee data
+deactivate AuthService
+PostController -> Database: Check if mentor exists
+activate Database
+Database -> PostController: Mentor found
+PostController -> Database: Check existing request
+Database -> PostController: No duplicate found
+PostController -> Database: Create MenteeConnection (PENDING)
+Database -> PostController: Connection created
+PostController -> NotificationSystem: Create notification
+activate NotificationSystem
+NotificationSystem -> Database: Save notification
+deactivate NotificationSystem
+Database -> NotificationSystem: Success
+deactivate Database
+activate NotificationSystem
+NotificationSystem -> PostController: Notification created
+deactivate NotificationSystem
+PostController -> Browser: Return success
+deactivate PostController
+
+Browser -> Mentee: Show "Request sent" state
+Browser -> Mentee: Display request status
+
+
+@enduml

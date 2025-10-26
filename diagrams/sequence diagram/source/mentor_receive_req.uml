@@ -1,0 +1,38 @@
+@startuml
+title Select a Match Mentor - Mentor Receives Request Flow
+
+actor Mentor
+participant Browser
+participant NotificationDropdown
+participant "PostController" as PostController
+participant "Auth Service" as AuthService
+participant Database
+
+activate Mentor
+activate Browser
+Mentor -> Browser: Log in or navigate
+
+Browser -> NotificationDropdown: Fetch notifications
+
+activate NotificationDropdown
+NotificationDropdown -> PostController: GET /api/mentor/requests
+deactivate NotificationDropdown
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: Mentor data
+deactivate AuthService
+PostController -> Database: Fetch PENDING connections
+activate Database
+Database -> PostController: Request list
+deactivate Database
+PostController -> Browser: Return requests
+deactivate PostController
+
+Browser -> NotificationDropdown: Show badge + list
+
+activate NotificationDropdown
+NotificationDropdown -> Mentor: Display notifications
+deactivate NotificationDropdown
+
+@enduml

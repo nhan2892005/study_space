@@ -1,0 +1,54 @@
+@startuml
+title AI Chatbot - Admin Index Documents Flow
+
+actor Admin
+participant Browser
+participant "RAGController" as PostController
+participant "Auth Service" as AuthService
+participant Database
+participant "RAG Service" as RAGService
+participant "Embedding Service" as EmbeddingService
+participant "LLMs API" as GeminiAPI
+participant "Vector Store" as VectorStore
+
+activate Admin
+activate Browser
+
+Admin -> Browser: Navigate to /admin/rag
+Browser -> Admin: Load page
+
+Admin -> Browser: Click "Index Mentors"
+Browser -> PostController: POST /api/chatbot/embed {types: ['...']}
+
+activate PostController
+PostController -> AuthService: Verify admin role
+activate AuthService
+AuthService -> PostController: Admin confirmed
+deactivate AuthService
+PostController -> Database: Fetch all relevate data
+activate Database
+Database -> PostController: Return data
+deactivate Database
+PostController -> RAGService: Format documents
+activate RAGService
+RAGService -> RAGService: Build content strings
+RAGService -> EmbeddingService: Generate embeddings
+activate EmbeddingService
+EmbeddingService -> GeminiAPI: Batch embed requests
+activate GeminiAPI
+GeminiAPI -> EmbeddingService: Vectors
+deactivate GeminiAPI
+EmbeddingService -> RAGService: Embeddings ready
+deactivate EmbeddingService
+RAGService -> VectorStore: Upsert vectors with metadata
+activate VectorStore
+VectorStore -> RAGService: Success
+deactivate VectorStore
+RAGService -> PostController: Index complete
+deactivate RAGService
+PostController -> Browser: Return stats {indexed: N}
+deactivate PostController
+Browser -> Admin: Show success toast
+Browser -> Admin: Display success
+
+@enduml

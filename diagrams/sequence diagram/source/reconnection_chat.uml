@@ -1,0 +1,42 @@
+@startuml
+title Real-time Chat - Reconnection Flow
+
+actor User
+participant Browser
+participant "Socket Client" as SocketClient
+participant "Socket Server" as SocketServer
+participant "useMessages Hook" as Hook
+participant "PostController" as PostController
+participant Database
+participant ChatArea
+
+activate User
+activate Browser
+
+User -> Browser: Online
+Browser -> SocketClient: Detect online
+activate Browser
+deactivate Browser
+activate SocketClient
+SocketClient -> SocketServer: Reconnect
+activate SocketServer
+SocketServer -> SocketClient: Connection established
+deactivate SocketServer
+SocketClient -> Hook: Clear polling
+deactivate SocketClient
+activate Hook
+Hook -> PostController: Fetch missed messages
+activate PostController
+PostController -> Database: Get messages since last timestamp
+activate Database
+Database -> PostController: New messages
+deactivate Database
+PostController -> Hook: Messages data
+deactivate PostController
+Hook -> ChatArea: Update UI
+deactivate Hook
+activate ChatArea
+ChatArea -> User: Render updated messages
+deactivate ChatArea
+
+@enduml

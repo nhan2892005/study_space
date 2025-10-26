@@ -1,0 +1,55 @@
+@startuml
+title Chat - Send Message with Files Flow
+
+actor User
+participant Browser
+participant "Cloudinary API" as CloudinaryAPI
+participant "Cloudinary Server" as CloudinaryServer
+participant "useMessages Hook" as Hook
+participant "Socket Client" as SocketClient
+participant "Socket Server" as SocketServer
+participant Database
+participant "Socket.io" as SocketIO
+participant "All Clients" as AllClients
+
+activate User
+activate Browser
+User -> Browser: Select files + type message
+
+Browser -> User: Show text and file previews
+
+User -> Browser: Click send
+Browser -> Hook: Call sendMessage(content, files)
+
+activate Hook
+Hook -> Browser: Create FormData
+Browser -> CloudinaryAPI: POST /api/uploads/cloudinary
+activate CloudinaryAPI
+CloudinaryAPI -> CloudinaryServer: Upload files
+activate CloudinaryServer
+CloudinaryServer -> CloudinaryAPI: File URLs
+deactivate CloudinaryServer
+CloudinaryAPI -> Browser: Return URLs + metadata
+deactivate CloudinaryAPI
+Browser -> Hook: Files uploaded
+Hook -> SocketClient: Emit with file URLs
+deactivate Hook
+activate SocketClient
+SocketClient -> SocketServer: Message + files data
+deactivate SocketClient
+activate SocketServer
+SocketServer -> Database: Save message + file records
+activate Database
+Database -> SocketServer: Success
+deactivate Database
+SocketServer -> SocketIO: Broadcast to channel
+deactivate SocketServer
+activate SocketIO
+SocketIO -> AllClients: 'new-message' with files
+deactivate SocketIO
+activate AllClients
+AllClients -> Browser: Render message + file previews
+deactivate AllClients
+Browser -> User: Display message with files
+
+@enduml

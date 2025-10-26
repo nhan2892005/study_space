@@ -1,0 +1,82 @@
+@startuml
+title Approve/Reject Mentor Request - Approve Request Flow
+
+actor Mentor
+participant Browser
+participant NotificationDropdown
+participant "RequesMentort Controller" as PostController
+participant "RequesMentort Service" as RequestMentorService
+participant "Auth Service" as AuthService
+participant Database
+participant "Notification System" as NotificationSystem
+
+activate Mentor
+activate Browser
+
+Mentor -> Browser: Click notification
+Browser -> Mentor: Show request details
+Mentor -> Browser: Click "Đồng ý"
+Browser -> PostController: POST /api/mentor/requests/[id]/respond {action: 'ACCEPT'}
+activate PostController
+
+
+PostController -> AuthService: Verify session
+
+activate AuthService
+AuthService -> PostController: Mentor data
+deactivate AuthService
+
+PostController -> RequestMentorService: Fetch request
+activate RequestMentorService
+RequestMentorService -> Database: Fetch request by ID
+
+activate Database
+Database -> RequestMentorService: Request data
+
+
+RequestMentorService -> Database: Verify mentor owns request
+
+
+Database -> RequestMentorService: Ownership confirmed
+
+
+RequestMentorService -> Database: Check mentor capacity
+
+
+Database -> RequestMentorService: Has available slots
+
+
+RequestMentorService -> Database: Update status to ACCEPTED
+
+
+Database -> RequestMentorService: Connection updated
+
+
+RequestMentorService -> Database: Update MentorProfile stats
+
+
+Database -> RequestMentorService: Stats updated
+
+
+RequestMentorService -> NotificationSystem: Notify mentee
+
+activate NotificationSystem
+NotificationSystem -> Database: Create notification
+
+Database -> NotificationSystem: Success
+deactivate Database
+NotificationSystem -> RequestMentorService: Notification created
+deactivate NotificationSystem
+
+RequestMentorService -> PostController: Success
+deactivate RequestMentorService
+
+PostController -> Browser: Return success
+deactivate PostController
+Browser -> NotificationDropdown: Fetch updated list
+activate NotificationDropdown
+NotificationDropdown -> Browser: Update UI
+deactivate NotificationDropdown
+Browser -> Mentor: Display updated list
+
+@enduml

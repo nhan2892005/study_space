@@ -1,0 +1,56 @@
+@startuml
+title AI Chatbot - Streaming Chat Flow
+
+actor User
+participant Browser
+participant ChatInterface
+participant "PostController" as PostController
+participant "Auth Service" as AuthService
+participant Database
+participant "RAG Chatbot Service" as RAGChatbot
+participant "Vector Store (Pinecone)" as VectorStore
+participant "LLMs API" as GeminiAPI
+
+activate User
+activate Browser
+
+User -> Browser: Type question
+Browser -> User: Update input
+User -> Browser: Click send
+Browser -> PostController: POST /api/chatbot/stream
+
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: User data
+deactivate AuthService
+PostController -> RAGChatbot: Call chatStream()
+activate RAGChatbot
+RAGChatbot -> VectorStore: Similarity search
+activate VectorStore
+VectorStore -> RAGChatbot: Relevant documents
+deactivate VectorStore
+RAGChatbot -> GeminiAPI: Stream request
+activate GeminiAPI
+loop For each chunk
+    GeminiAPI -> RAGChatbot: [Stream chunk]
+    RAGChatbot -> PostController: [Chunk]
+    PostController -> Browser: SSE: data: {chunk: "..."}
+    Browser -> ChatInterface: Append to message
+    activate ChatInterface
+end loop
+GeminiAPI -> RAGChatbot: [Stream complete]
+deactivate GeminiAPI
+RAGChatbot -> PostController: Full response
+deactivate RAGChatbot
+PostController -> Database: Save messages
+activate Database
+Database -> PostController: Success
+deactivate Database
+PostController -> Browser: SSE: data: {done: true, conversationId}
+deactivate PostController
+Browser -> ChatInterface: Finalize message
+ChatInterface -> User: Display final message
+deactivate ChatInterface
+
+@enduml

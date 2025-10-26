@@ -1,0 +1,43 @@
+@startuml
+title Approve/Reject Mentor Request - Reject Request Flow
+
+actor Mentor
+participant Browser
+participant "MentorRequest Controller" as PostController
+participant "MentorRequest Service" as MentorRequestService
+participant "Auth Service" as AuthService
+participant Database
+participant "Notification System" as NotificationSystem
+
+activate Mentor
+activate Browser
+Mentor -> Browser: Click "Từ chối"
+Browser -> Mentor: Show reason input (optional)
+Mentor -> Browser: Enter reason + confirm
+Browser -> PostController: POST /api/mentor/requests/[id]/respond {action: 'REJECT', reason}
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: Mentor data
+deactivate AuthService
+PostController -> MentorRequestService: Fetch request by ID
+activate MentorRequestService
+MentorRequestService -> Database: Fetch request by ID
+activate Database
+Database -> MentorRequestService: Request data
+MentorRequestService -> Database: Update status to REJECTED
+Database -> MentorRequestService: Connection updated
+MentorRequestService -> NotificationSystem: Notify mentee with reason
+activate NotificationSystem
+NotificationSystem -> Database: Create notification
+Database -> NotificationSystem: Success
+deactivate Database
+NotificationSystem -> MentorRequestService: Notification created
+deactivate NotificationSystem
+MentorRequestService -> PostController: Sucess
+deactivate MentorRequestService
+PostController -> Browser: Return success
+deactivate PostController
+Browser -> Mentor: Show updated UI
+
+@enduml

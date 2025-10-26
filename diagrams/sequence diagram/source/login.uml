@@ -1,0 +1,62 @@
+@startuml
+title Login Flow with OAuth
+
+actor User
+participant Browser
+participant "OAuth Provider (HCMUT_SSO)" as OAuth
+participant "Auth Controller" as AuthController
+participant "Auth Service" as AuthService
+participant "User Service" as UserService
+participant "User Repository" as UserRepo
+participant Database
+participant "Token Service" as TokenService
+
+activate User
+activate Browser
+User -> Browser: Select role (mentee/mentor/admin)
+
+Browser -> AuthController: GET /api/auth/signin?role=[role]
+activate AuthController
+AuthController -> OAuth: Redirect to OAuth login
+
+activate OAuth
+OAuth -> User: Show consent screen
+User -> OAuth: Grant permission
+OAuth -> AuthController: Return authorization code + redirect
+deactivate OAuth
+
+AuthController -> AuthService: handleSignIn(profile, account)
+activate AuthService
+AuthService -> UserService: findUser(email, profile)
+activate UserService
+UserService -> UserRepo: findByEmail and Role(email, role)
+activate UserRepo
+UserRepo -> Database: user.findUnique({where: {email, role}})
+activate Database
+Database -> UserRepo: User data | null
+deactivate Database
+
+UserRepo -> UserService: User data | null
+deactivate UserRepo
+UserService -> AuthService: User record
+deactivate UserService
+
+alt If user exists
+    AuthService -> TokenService: createToken({userId, email, name})
+    activate TokenService
+    TokenService -> TokenService: jwt.sign(payload, secret, {expiresIn: '24h'})
+    TokenService -> AuthService: JWT access token
+    deactivate TokenService
+    AuthService -> AuthController: {user, accessToken}
+    AuthController -> Browser: Set session cookie + redirect to /
+    Browser -> User: Render homepage
+else User not found
+    UserService -> AuthService: Throw exception not found
+    AuthService -> AuthController: Return 403: Unauthorized + redirect to /error_403
+    deactivate AuthService
+    AuthController -> Browser: Redirect to error page
+    deactivate AuthController
+    Browser -> User: Render error page
+end alt
+
+@enduml

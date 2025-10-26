@@ -1,0 +1,51 @@
+@startuml
+title Approve/Reject Mentor Request - Mentee Receives Response Flow
+
+actor Mentee
+participant Browser
+participant NotificationDropdown
+participant "MentorRequest Controller" as PostController
+participant "MentorRequest Service" as MentorRequestService
+
+participant Database
+
+activate Mentee
+activate Browser
+
+Mentee -> Browser: Navigate to app
+
+Browser -> NotificationDropdown: Poll notifications
+
+activate NotificationDropdown
+NotificationDropdown -> PostController: GET /api/invitations
+deactivate NotificationDropdown
+activate PostController
+PostController -> MentorRequestService: Fetch mentee notifications
+activate MentorRequestService
+MentorRequestService -> Database: Fetch mentee notifications
+activate Database
+Database -> MentorRequestService: Notification list
+MentorRequestService -> PostController: Notification list
+deactivate MentorRequestService
+
+deactivate Database
+PostController -> Browser: Return notifications
+deactivate PostController
+
+Browser -> NotificationDropdown: Show toast
+
+activate NotificationDropdown
+alt Request accepted
+    NotificationDropdown -> Browser: "Request accepted!"
+    
+    
+    Browser -> Mentee: Navigate to /mentor
+else Request rejected
+        NotificationDropdown -> Browser: Reason for reject
+        deactivate NotificationDropdown
+    Browser -> Mentee: Display rejection message
+    
+    
+end alt
+
+@enduml

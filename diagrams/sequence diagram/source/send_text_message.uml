@@ -1,0 +1,52 @@
+@startuml
+title Chat - Send Text Message Flow
+
+actor User
+participant Browser
+participant "useMessages Hook" as Hook
+participant "Socket Client" as SocketClient
+participant "Socket Server" as SocketServer
+participant "Auth Service" as AuthService
+participant Database
+participant "Socket.io" as SocketIO
+actor "All Clients" as AllClients
+activate User
+activate Browser
+User -> Browser: Type message in input
+
+
+User -> Browser: Press Enter
+
+Browser -> Hook: Call sendMessage()
+
+activate Hook
+Hook -> SocketClient: Emit 'send-message'
+deactivate Hook
+activate SocketClient
+SocketClient -> SocketServer: Send message data
+deactivate SocketClient
+activate SocketServer
+SocketServer -> AuthService: Verify JWT from socket auth
+activate AuthService
+AuthService -> SocketServer: User data
+deactivate AuthService
+SocketServer -> Database: Create message record
+activate Database
+Database -> SocketServer: Message saved
+deactivate Database
+SocketServer -> SocketIO: Broadcast to channel
+deactivate SocketServer
+activate SocketIO
+SocketIO -> AllClients: 'new-message' event
+deactivate SocketIO
+activate AllClients
+AllClients -> Hook: Receive message
+deactivate AllClients
+activate Hook
+Hook -> Browser: Update messages list
+deactivate Hook
+
+Browser -> User: Display message
+
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+title Refresh Token Flow
+
+actor User
+participant Browser
+participant Middleware
+participant "Token Service" as TokenService
+participant "Auth Service" as AuthService
+participant "User Service" as UserService
+participant "User Repository" as UserRepo
+participant Database
+
+activate User
+User -> Browser: Request "/\*\*"
+activate Browser
+
+Browser -> Middleware: Check authentication
+activate Middleware
+Middleware -> TokenService: verifyToken(sessionToken)
+activate TokenService
+TokenService -> TokenService: jwt.verify(token, secret)
+TokenService -> Middleware: Return token's status (expired)
+deactivate TokenService
+alt If token expired error
+    Middleware -> AuthService: refreshSession(email)
+    activate AuthService
+    AuthService -> UserService: getUserByEmail(email)
+
+    activate UserService
+    UserService -> UserRepo: findByEmail(email)
+    activate UserRepo
+    UserRepo -> Database: user.findUnique({where: {email}})
+    activate Database
+    Database -> UserRepo: User data
+    deactivate Database
+    UserRepo -> UserService: User data
+    deactivate UserRepo
+    UserService -> AuthService: User data
+    deactivate UserService
+    AuthService -> TokenService: createToken({userId, email, name})
+    activate TokenService
+    TokenService -> AuthService: JWT access token
+    deactivate TokenService
+    AuthService -> Middleware: Set new session cookie
+    deactivate AuthService
+    
+    Middleware -> Browser: Render page
+    deactivate Middleware
+    Browser -> User: Display protected page
+end alt
+
+
+@enduml

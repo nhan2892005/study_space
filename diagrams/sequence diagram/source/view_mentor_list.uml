@@ -1,0 +1,49 @@
+@startuml
+title Select a Match Mentor - View Mentors List Flow
+
+actor Mentee
+participant Browser
+participant "Mentor Controller" as NextJSServer
+participant "Mentor Service" as MentorService
+participant "Auth Service" as AuthService
+participant Database
+
+activate Mentee
+activate Browser
+
+Mentee -> Browser: Navigate to /mentor
+Browser -> NextJSServer: SSR fetch mentors
+
+activate NextJSServer
+NextJSServer -> AuthService: getServerSession()
+activate AuthService
+AuthService -> NextJSServer: User session
+deactivate AuthService
+
+NextJSServer -> MentorService: Check existing connection
+activate MentorService
+MentorService -> Database: Check existing connection
+activate Database
+Database -> MentorService: Connection status
+
+alt Has accepted connection
+    MentorService -> Database: Fetch assigned mentor details
+    Database -> MentorService: Mentor data
+    NextJSServer -> Browser: Mentor Information
+    Browser -> Mentee: Display assigned mentor
+else No connection
+    MentorService -> Database: Fetch all mentor profiles
+    
+    Database -> MentorService: Mentors list
+    deactivate Database
+    MentorService -> NextJSServer: Mentor list
+    deactivate MentorService
+    
+    NextJSServer -> Browser: Mentor list
+    deactivate NextJSServer
+    
+    Browser -> Mentee: Display mentor list by pagination
+    
+end alt
+
+@enduml

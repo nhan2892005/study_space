@@ -1,0 +1,28 @@
+@startuml
+title Logout Flow
+
+actor User
+participant Browser
+participant "Auth Controller" as AuthController
+participant "Auth Service" as AuthService
+
+
+activate User
+activate Browser
+User -> Browser: Click "Sign out"
+Browser -> AuthController: POST /api/auth/signout
+activate AuthController
+AuthController -> AuthService: signOut()
+
+activate AuthService
+AuthService -> TokenService: handleSignOut(sessionId)
+activate TokenService
+TokenService -> AuthService: invalidateToken(token)
+deactivate TokenService
+AuthService -> AuthController: Success
+deactivate AuthService
+AuthController -> Browser: Clear session cookie + redirect /
+deactivate AuthController
+Browser -> User: Render redirect page
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+title Delete Post Flow
+
+actor User
+participant Browser
+participant "PostController" as PostController
+participant "Auth Service" as AuthService
+participant "PostService" as PostService
+participant Database
+
+activate User
+activate Browser
+User -> Browser: Click delete button
+Browser -> User: Show confirmation
+User -> Browser: Confirm delete
+Browser -> PostController: DELETE /api/posts/[id]
+activate PostController
+PostController -> AuthService: Verify session
+activate AuthService
+AuthService -> PostController: User data
+deactivate AuthService
+PostController -> PostService: Post data + User data
+activate PostService
+PostService -> Database: Check post ownership
+activate Database
+Database -> PostService: Post data
+PostService -> Database: Delete post (cascade comments, reactions)
+Database -> PostService: Success
+deactivate Database
+PostService -> PostController: Return success
+deactivate PostService
+PostController -> Browser: Status code 200
+deactivate PostController
+Browser -> Browser: router.refresh()
+Browser -> User: Render without deleted post
+
+@enduml
