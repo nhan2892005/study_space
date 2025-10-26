@@ -1,0 +1,27 @@
+@startuml
+title Authentication Process - Login Flow
+
+start
+:Người dùng nhấn "Sign in as [role]";
+:Chuyển hướng đến Google OAuth;
+:Người dùng xem màn hình đồng ý (consent screen);
+if (Người dùng cấp quyền?) then (yes)
+    :Google OAuth trả về mã ủy quyền;
+    :Trao đổi mã ủy quyền để lấy token và hồ sơ người dùng;
+    :Kiểm tra người dùng trong cơ sở dữ liệu;
+    if (Người dùng tồn tại?) then (yes)
+        :Cập nhật thông tin người dùng với vai trò;
+    else (no)
+        :Tạo người dùng mới với vai trò;
+    endif
+    :Tạo JWT token;
+    :Lưu session cookie;
+    :Chuyển hướng đến trang chủ;
+    :Hiển thị trang chủ với phiên;
+else (no)
+    :Hủy đăng nhập;
+    stop
+endif
+stop
+
+@enduml

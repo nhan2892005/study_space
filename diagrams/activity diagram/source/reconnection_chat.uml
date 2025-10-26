@@ -1,0 +1,19 @@
+@startuml
+title Real-time Chat Process - Reconnection Flow
+
+start
+:Phát hiện kết nối WebSocket khôi phục;
+:Kết nối lại với Socket Server;
+if (Kết nối thành công?) then (yes)
+    :Xóa polling interval;
+    :Gửi yêu cầu lấy tin nhắn bị bỏ lỡ;
+    :Lấy tin nhắn từ cơ sở dữ liệu (dựa trên timestamp);
+    :Cập nhật trạng thái tin nhắn;
+    :Cập nhật giao diện chat;
+else (no)
+    :Tiếp tục chế độ Pull (HTTP fallback);
+    stop
+endif
+stop
+
+@enduml

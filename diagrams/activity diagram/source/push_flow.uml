@@ -1,0 +1,18 @@
+@startuml
+title Real-time Chat Process - Push Flow
+
+start
+:Người dùng khác gửi tin nhắn;
+:Lưu tin nhắn vào cơ sở dữ liệu;
+:Phát tin nhắn đến kênh qua Socket.io;
+if (Kết nối WebSocket hoạt động?) then (yes)
+    :Nhận sự kiện 'new-message';
+    :Cập nhật trạng thái tin nhắn;
+    :Hiển thị tin nhắn mới trên giao diện;
+else (no)
+    :Chuyển sang chế độ Pull (HTTP fallback);
+    stop
+endif
+stop
+
+@enduml

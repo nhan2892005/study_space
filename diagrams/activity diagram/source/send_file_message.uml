@@ -1,0 +1,33 @@
+@startuml
+title Real-time Chat Process - Send Message with Files Flow
+
+start
+:Người dùng chọn tệp và nhập tin nhắn;
+:Hiển thị bản xem trước tệp;
+:Người dùng nhấn gửi;
+:Validate tin nhắn và tệp;
+if (Dữ liệu hợp lệ?) then (yes)
+    fork
+        :Tạo FormData;
+        :Tải tệp lên Cloudinary;
+        :Nhận URL tệp;
+    fork again
+        :Chuẩn bị tin nhắn;
+    end fork
+    :Gửi tin nhắn kèm URL qua WebSocket;
+    :Xác minh JWT;
+    if (JWT hợp lệ?) then (yes)
+        :Lưu tin nhắn và tệp vào cơ sở dữ liệu;
+        :Phát tin nhắn đến kênh;
+        :Hiển thị tin nhắn và bản xem trước tệp trên tất cả client;
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hiển thị thông báo lỗi;
+    stop
+endif
+stop
+
+@enduml

@@ -1,0 +1,22 @@
+@startuml
+title Real-time Chat Process - Pull Flow (HTTP Fallback)
+
+start
+:Phát hiện mất kết nối WebSocket;
+:Thiết lập polling interval (5-10 giây);
+while (Kết nối WebSocket bị mất?)
+    :Gửi yêu cầu GET /api/servers/[id]/channels/[id]/messages;
+    :Xác minh phiên người dùng;
+    if (Phiên hợp lệ?) then (yes)
+        :Lấy danh sách tin nhắn từ cơ sở dữ liệu;
+        :Hợp nhất tin nhắn với dữ liệu hiện có;
+        :Cập nhật giao diện chat;
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+end while
+:Ngừng polling khi kết nối WebSocket khôi phục;
+stop
+
+@enduml

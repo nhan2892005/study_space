@@ -1,0 +1,30 @@
+@startuml
+title Post Management Process - Create Post Flow
+
+start
+:Người dùng nhập nội dung và chọn hình ảnh;
+:Validate dữ liệu đầu vào;
+if (Dữ liệu hợp lệ?) then (yes)
+    if (Có hình ảnh?) then (yes)
+        :Tải hình ảnh lên Cloudinary;
+        :Nhận URL hình ảnh;
+    else (no)
+        :Không tải hình ảnh;
+    endif
+    :Gửi yêu cầu POST /api/posts;
+    :Xác minh phiên người dùng;
+    if (Phiên hợp lệ?) then (yes)
+        :Lưu bài đăng vào cơ sở dữ liệu;
+        :Làm mới giao diện;
+        :Hiển thị bài đăng mới;
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hiển thị thông báo lỗi;
+    stop
+endif
+stop
+
+@enduml

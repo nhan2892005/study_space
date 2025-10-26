@@ -1,0 +1,30 @@
+@startuml
+title Post Management Process - Delete Post Flow
+
+start
+:Người dùng nhấn nút xóa;
+:Hiển thị xác nhận xóa;
+if (Người dùng xác nhận?) then (yes)
+    :Gửi yêu cầu DELETE /api/posts/[id];
+    :Xác minh phiên người dùng;
+    if (Phiên hợp lệ?) then (yes)
+        :Kiểm tra quyền sở hữu bài đăng;
+        if (Người dùng là chủ bài đăng?) then (yes)
+            :Xóa bài đăng và dữ liệu liên quan (comments, reactions);
+            :Làm mới giao diện;
+            :Hiển thị giao diện không có bài đăng;
+        else (no)
+            :Hiển thị thông báo lỗi quyền;
+            stop
+        endif
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hủy xóa;
+    stop
+endif
+stop
+
+@enduml

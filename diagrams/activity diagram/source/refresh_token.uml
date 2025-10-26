@@ -1,0 +1,28 @@
+@startuml
+title Authentication Process - Refresh Token Flow
+
+start
+:Người dùng yêu cầu trang bảo vệ;
+:Kiểm tra session cookie;
+if (Session hợp lệ?) then (yes)
+    :Xác minh JWT token;
+    if (Token hết hạn?) then (yes)
+        :Lấy thông tin người dùng bằng email;
+        if (Người dùng tồn tại?) then (yes)
+            :Tạo JWT token mới;
+            :Cập nhật session cookie;
+            :Hiển thị trang bảo vệ;
+        else (no)
+            :Yêu cầu đăng nhập lại;
+            stop
+        endif
+    else (no)
+        :Hiển thị trang bảo vệ;
+    endif
+else (no)
+    :Yêu cầu đăng nhập lại;
+    stop
+endif
+stop
+
+@enduml

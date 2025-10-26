@@ -1,0 +1,27 @@
+@startuml
+title Real-time Chat Process - Send Text Message Flow
+
+start
+:Người dùng nhập tin nhắn;
+:Cập nhật trạng thái input;
+:Người dùng nhấn Enter;
+:Validate tin nhắn;
+if (Tin nhắn hợp lệ?) then (yes)
+    :Gửi tin nhắn qua WebSocket (emit 'send-message');
+    :Xác minh JWT;
+    if (JWT hợp lệ?) then (yes)
+        :Lưu tin nhắn vào cơ sở dữ liệu;
+        :Phát tin nhắn đến kênh;
+        :Cập nhật danh sách tin nhắn trên tất cả client;
+        :Hiển thị tin nhắn trên giao diện;
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hiển thị thông báo lỗi;
+    stop
+endif
+stop
+
+@enduml

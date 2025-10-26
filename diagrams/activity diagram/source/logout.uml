@@ -1,0 +1,12 @@
+@startuml
+title Authentication Process - Logout Flow
+
+start
+:Người dùng nhấn "Sign out";
+:Gửi yêu cầu đăng xuất;
+:Xóa session cookie;
+:Chuyển hướng đến trang chủ;
+:Hiển thị trang chủ;
+stop
+
+@enduml

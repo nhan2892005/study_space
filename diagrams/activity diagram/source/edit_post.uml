@@ -1,0 +1,32 @@
+@startuml
+title Post Management Process - Edit Post Flow
+
+start
+:Người dùng nhấn nút chỉnh sửa;
+:Hiển thị modal chỉnh sửa;
+:Người dùng sửa nội dung;
+:Người dùng nhấn "Lưu";
+:Validate dữ liệu đầu vào;
+if (Dữ liệu hợp lệ?) then (yes)
+    :Gửi yêu cầu PATCH /api/posts/[id];
+    :Xác minh phiên người dùng;
+    if (Phiên hợp lệ?) then (yes)
+        :Kiểm tra quyền sở hữu bài đăng;
+        if (Người dùng là chủ bài đăng?) then (yes)
+            :Cập nhật bài đăng trong cơ sở dữ liệu;
+            :Cập nhật giao diện bài đăng;
+        else (no)
+            :Hiển thị thông báo lỗi quyền;
+            stop
+        endif
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hiển thị thông báo lỗi;
+    stop
+endif
+stop
+
+@enduml
