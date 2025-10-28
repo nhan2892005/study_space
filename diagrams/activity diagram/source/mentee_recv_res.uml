@@ -1,0 +1,20 @@
+@startuml
+title Mentor Request Handling - Mentee Receives Response
+
+start
+:Mentee điều hướng đến ứng dụng;
+:Kiểm tra thông báo định kỳ;
+if (Có thông báo mới?) then (yes)
+    :Hiển thị toast thông báo;
+    if (Yêu cầu được chấp nhận?) then (yes)
+        :Chuyển hướng đến /mentor;
+        :Hiển thị chi tiết mentor được gán;
+    else (no)
+        :Hiển thị lý do từ chối;
+    endif
+else (no)
+    :Không hiển thị gì;
+endif
+stop
+
+@enduml

@@ -1,0 +1,23 @@
+@startuml
+title Mentor Matching - View Mentors List
+
+start
+:Mentee điều hướng đến /mentor;
+:Xác minh phiên người dùng;
+if (Phiên hợp lệ?) then (yes)
+    :Kiểm tra kết nối hiện tại;
+    if (Đã có kết nối được chấp nhận?) then (yes)
+        :Lấy chi tiết mentor được gán;
+        :Hiển thị trang MentorWall với mentor chính;
+    else (no)
+        :Lấy danh sách tất cả mentor;
+        :Đếm số mentee hiện tại cho từng mentor;
+        :Hiển thị danh sách MentorCard;
+    endif
+else (no)
+    :Yêu cầu đăng nhập;
+    stop
+endif
+stop
+
+@enduml

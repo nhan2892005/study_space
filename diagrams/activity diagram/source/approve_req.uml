@@ -1,0 +1,27 @@
+@startuml
+title Mentor Request Handling - Approve Request
+
+start
+:Mentor nhấn vào thông báo;
+:Hiển thị chi tiết yêu cầu;
+:Mentor nhấn "Đồng ý";
+:Xác minh phiên và quyền sở hữu yêu cầu;
+if (Hợp lệ?) then (yes)
+    :Kiểm tra dung lượng mentor;
+    if (Còn slot?) then (yes)
+        :Cập nhật trạng thái thành ACCEPTED;
+        :Cập nhật thống kê MentorProfile;
+        :Gửi thông báo đến mentee;
+        :Xóa thông báo khỏi danh sách mentor;
+        :Cập nhật UI;
+    else (no)
+        :Hiển thị "Đã đầy mentee";
+        stop
+    endif
+else (no)
+    :Hiển thị lỗi quyền;
+    stop
+endif
+stop
+
+@enduml

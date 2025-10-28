@@ -1,0 +1,35 @@
+@startuml
+title mentor Matching - Send Connection Request
+
+start
+:Mentee nhấn "Request" trên MentorCard;
+:Hiển thị xác nhận;
+if (Mentee xác nhận?) then (yes)
+    :Xác minh phiên người dùng;
+    if (Phiên hợp lệ?) then (yes)
+        :Kiểm tra mentor tồn tại;
+        if (Mentor tồn tại?) then (yes)
+            :Kiểm tra yêu cầu trùng lặp;
+            if (Chưa gửi yêu cầu?) then (yes)
+                :Tạo MenteeConnection (PENDING);
+                :Gửi thông báo đến mentor;
+                :Cập nhật trạng thái nút "Request sent";
+            else (no)
+                :Hiển thị "Đã gửi yêu cầu";
+                stop
+            endif
+        else (no)
+            :Hiển thị lỗi "Mentor không tồn tại";
+            stop
+        endif
+    else (no)
+        :Yêu cầu đăng nhập lại;
+        stop
+    endif
+else (no)
+    :Hủy yêu cầu;
+    stop
+endif
+stop
+
+@enduml

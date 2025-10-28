@@ -1,0 +1,35 @@
+@startuml
+title Dashboard Viewing - View Dashboard (Role-based)
+
+start
+:Người dùng điều hướng đến /dashboard;
+:Xác minh phiên người dùng;
+if (Phiên hợp lệ?) then (yes)
+    :Xác định vai trò người dùng;
+    if (Là Admin?) then (yes)
+        :Lấy thống kê hệ thống;
+        :Lấy thống kê mentor;
+        :Lấy dữ liệu hoạt động 30 ngày;
+        :Hiển thị biểu đồ (Line, Pie, Bar);
+    elseif (Là Mentor?) then
+        :Lấy danh sách mentee được chấp nhận;
+        :Lấy tiến độ từng mentee;
+        :Tính điểm theo danh mục;
+        :Hiển thị ma trận hiệu suất, timeline, phân phối;
+    elseif (Là Mentee?) then
+        :Lấy bản ghi tiến độ cá nhân;
+        :Nhóm theo danh mục;
+        :Lấy sự kiện sắp tới;
+        :Lấy phản hồi gần đây;
+        :Hiển thị radar chart, line chart, progress bars;
+    else
+        :Hiển thị lỗi vai trò;
+        stop
+    endif
+else (no)
+    :Yêu cầu đăng nhập;
+    stop
+endif
+stop
+
+@enduml

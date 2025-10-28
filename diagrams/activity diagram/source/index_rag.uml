@@ -1,0 +1,23 @@
+@startuml
+title AI Chatbot Interaction - Admin Index Documents
+
+start
+:Admin điều hướng đến /admin/rag;
+:Admin nhấn "Index Mentors";
+:Xác minh vai trò admin;
+if (Là admin?) then (yes)
+    :Lấy tất cả mentor và hồ sơ;
+    fork
+        :Định dạng từng mentor thành tài liệu;
+        :Tạo embedding cho từng tài liệu;
+    end fork
+    :Lưu vector + metadata vào Pinecone;
+    :Cập nhật thống chí số thành công;
+    :Hiển thị thông báo thành công + số lượng đã lập chỉ mục;
+else (no)
+    :Hiển thị lỗi quyền;
+    stop
+endif
+stop
+
+@enduml

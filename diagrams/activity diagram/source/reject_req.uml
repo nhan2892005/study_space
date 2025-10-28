@@ -1,0 +1,25 @@
+@startuml
+title Mentor Request Handling - Reject Request
+
+start
+:Mentor nhấn "Từ chối";
+:Hiển thị ô nhập lý do (tùy chọn);
+:Mentor nhập lý do + xác nhận;
+if (Xác nhận từ chối?) then (yes)
+    :Xác minh phiên và quyền sở hữu;
+    if (Hợp lệ?) then (yes)
+        :Cập nhật trạng thái thành REJECTED;
+        :Gửi thông báo kèm lý do đến mentee;
+        :Xóa thông báo khỏi danh sách mentor;
+        :Cập nhật UI;
+    else (no)
+        :Hiển thị lỗi quyền;
+        stop
+    endif
+else (no)
+    :Hủy từ chối;
+    stop
+endif
+stop
+
+@enduml

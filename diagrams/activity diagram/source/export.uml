@@ -1,0 +1,19 @@
+@startuml
+title Dashboard Viewing - Export Report (Admin)
+
+start
+:Admin nhấn "Xuất báo cáo";
+:Xác minh vai trò admin;
+if (Là admin?) then (yes)
+    :Thu thập dữ liệu dashboard;
+    :Định dạng thành CSV;
+    :Tạo Blob file;
+    :Tạo liên kết tải xuống;
+    :Tải file "mentor-report.csv";
+else (no)
+    :Hiển thị lỗi quyền;
+    stop
+endif
+stop
+
+@enduml
