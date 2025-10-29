@@ -37,83 +37,107 @@ const MenteeDashboard = () => {
   const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API calls
+  // Use mock data for demo
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/dashboard/mentee');
-        if (!res.ok) throw new Error(`Failed to fetch mentee dashboard: ${res.status}`);
-        const data = await res.json();
-        if (!mounted) return;
+    setLoading(true);
+    // Mock progress data
+    const mockProgress: ProgressData[] = [
+      { category: 'Coding', currentScore: 82, previousScore: 78, target: 100, color: '#3B82F6' },
+      { category: 'Communication', currentScore: 70, previousScore: 68, target: 100, color: '#10B981' },
+      { category: 'Project Management', currentScore: 66, previousScore: 65, target: 100, color: '#F59E0B' },
+      { category: 'Problem Solving', currentScore: 75, previousScore: 70, target: 100, color: '#8B5CF6' },
+      { category: 'Teamwork', currentScore: 78, previousScore: 75, target: 100, color: '#EF4444' },
+    ];
 
-        // Map progress records
-        const progress: ProgressData[] = (data.progressData || []).map((p: any) => ({
-          category: p.category || p.name || 'General',
-          currentScore: p.currentScore ?? p.score ?? 0,
-          previousScore: p.previousScore ?? 0,
-          target: p.target ?? p.maxScore ?? 100,
-          color: p.color || '#3B82F6'
-        }));
+    // Mock events
+    const mockEvents: CalendarEvent[] = [
+      {
+        id: 'ev1',
+        title: 'Project Deadline',
+        startTime: '2025-10-30T09:00:00',
+        endTime: '2025-10-30T11:00:00',
+        type: 'DEADLINE',
+        priority: 'HIGH',
+        isCompleted: false,
+      },
+      {
+        id: 'ev2',
+        title: 'Weekly Meeting',
+        startTime: '2025-10-31T14:00:00',
+        endTime: '2025-10-31T15:00:00',
+        type: 'MEETING',
+        priority: 'MEDIUM',
+        isCompleted: false,
+      },
+      {
+        id: 'ev3',
+        title: 'Assignment Submission',
+        startTime: '2025-11-02T23:59:00',
+        endTime: '2025-11-02T23:59:00',
+        type: 'ASSIGNMENT',
+        priority: 'URGENT',
+        isCompleted: false,
+      },
+      {
+        id: 'ev4',
+        title: 'Final Exam',
+        startTime: '2025-11-10T08:00:00',
+        endTime: '2025-11-10T10:00:00',
+        type: 'EXAM',
+        priority: 'HIGH',
+        isCompleted: false,
+      },
+      {
+        id: 'ev5',
+        title: 'Team Building',
+        startTime: '2025-11-12T16:00:00',
+        endTime: '2025-11-12T18:00:00',
+        type: 'MEETING',
+        priority: 'LOW',
+        isCompleted: true,
+      },
+    ];
 
-        const events: CalendarEvent[] = (data.events || []).map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          startTime: e.startTime,
-          endTime: e.endTime,
-          type: e.type,
-          priority: e.priority,
-          isCompleted: !!e.isCompleted,
-        }));
+    // Mock recent feedback
+    const mockFeedback: RecentFeedback[] = [
+      {
+        id: 'fb1',
+        category: 'Coding',
+        score: 4.5,
+        comment: 'Excellent improvement in coding skills!',
+        date: '2025-10-28',
+        mentorName: 'Mr. Nguyen',
+      },
+      {
+        id: 'fb2',
+        category: 'Communication',
+        score: 4.2,
+        comment: 'Great participation in group discussions.',
+        date: '2025-10-25',
+        mentorName: 'Ms. Tran',
+      },
+      {
+        id: 'fb3',
+        category: 'Project Management',
+        score: 4.0,
+        comment: 'Managed the project timeline well.',
+        date: '2025-10-20',
+        mentorName: 'Mr. Le',
+      },
+      {
+        id: 'fb4',
+        category: 'Teamwork',
+        score: 4.8,
+        comment: 'Outstanding collaboration with peers.',
+        date: '2025-10-18',
+        mentorName: 'Ms. Pham',
+      },
+    ];
 
-        const feedback: RecentFeedback[] = (data.recentFeedback || []).map((f: any) => ({
-          id: f.id,
-          category: f.category || 'General',
-          score: f.score ?? 0,
-          comment: f.comment || '',
-          date: f.date || (f.createdAt ? new Date(f.createdAt).toISOString().split('T')[0] : ''),
-          mentorName: f.mentorName || f.mentor?.name || 'Unknown'
-        }));
-
-        setProgressData(progress);
-        setEvents(events);
-        setRecentFeedback(feedback);
-        // also fetch assigned tasks (created or assigned)
-        try {
-          const t = await fetch('/api/tasks');
-          if (t.ok) {
-            const td = await t.json();
-            const assigned = td.assigned || td.assignedEvents || td.assigned || [];
-            // merge assigned events into events list if not already present
-            const assignedEvents = (assigned || []).map((a: any) => {
-              const ev = a.event || a;
-              return {
-                id: ev.id,
-                title: ev.title,
-                startTime: ev.startTime,
-                endTime: ev.endTime,
-                type: ev.type,
-                priority: ev.priority,
-                isCompleted: ev.isCompleted
-              };
-            });
-
-            // append unique assigned events
-            const merged = [...events];
-            assignedEvents.forEach((ae: any) => { if (!merged.find((x: any) => x.id === ae.id)) merged.push(ae); });
-            setEvents(merged.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
-          }
-        } catch (e) { /* ignore */ }
-      } catch (err) {
-        console.error('Error loading mentee dashboard:', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    load();
-    return () => { mounted = false; };
+    setProgressData(mockProgress);
+    setEvents(mockEvents);
+    setRecentFeedback(mockFeedback);
+    setLoading(false);
   }, []);
 
   const timeSeriesData = [

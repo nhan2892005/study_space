@@ -39,49 +39,73 @@ const MentorDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Mock data
+  // Use mock data for demo
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/dashboard/mentor');
-        if (!res.ok) throw new Error(`Failed to fetch mentor dashboard: ${res.status}`);
-        const data = await res.json();
-        if (!mounted) return;
-
-        // Map menteeStats — API should return menteeStats array; fallback to empty
-        const mentees: MenteeStats[] = (data.menteeStats || []).map((m: any) => ({
-          id: m.id,
-          name: m.name || 'Unknown',
-          avatar: m.avatar || m.image || '/api/placeholder/40/40',
-          overallScore: typeof m.overallScore === 'number' ? m.overallScore : Math.round((m.categories?.coding || 0 + m.categories?.communication || 0 + m.categories?.project || 0 + m.categories?.problem || 0 + m.categories?.teamwork || 0) / 5),
-          improvement: typeof m.improvement === 'number' ? m.improvement : 0,
-          lastActivity: m.lastActivity || (m.updatedAt ? new Date(m.updatedAt).toLocaleString() : ''),
-          categories: {
-            coding: m.categories?.coding || 0,
-            communication: m.categories?.communication || 0,
-            project: m.categories?.project || m.categories?.project_management || 0,
-            problem: m.categories?.problem || m.categories?.problem_solving || 0,
-            teamwork: m.categories?.teamwork || 0,
-          }
-        }));
-
-        setMenteeStats(mentees);
-
-        // Optionally map analytics arrays if provided
-        if (data.monthlyProgressData) {
-          // replace local const via state? currently monthlyProgressData is const — keep local fallback
-        }
-      } catch (err) {
-        console.error('Error loading mentor dashboard:', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    load();
-    return () => { mounted = false; };
+    setLoading(true);
+    const mockMentees: MenteeStats[] = [
+      {
+        id: 'm1',
+        name: 'Nguyen Van A',
+        avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+        overallScore: 82,
+        improvement: 4,
+        lastActivity: '2025-10-28 14:30',
+        categories: {
+          coding: 85,
+          communication: 78,
+          project: 80,
+          problem: 82,
+          teamwork: 88,
+        },
+      },
+      {
+        id: 'm2',
+        name: 'Tran Thi B',
+        avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+        overallScore: 76,
+        improvement: 2,
+        lastActivity: '2025-10-27 09:10',
+        categories: {
+          coding: 75,
+          communication: 80,
+          project: 72,
+          problem: 70,
+          teamwork: 74,
+        },
+      },
+      {
+        id: 'm3',
+        name: 'Le Van C',
+        avatar: 'https://randomuser.me/api/portraits/men/65.jpg',
+        overallScore: 68,
+        improvement: -1,
+        lastActivity: '2025-10-26 16:45',
+        categories: {
+          coding: 65,
+          communication: 70,
+          project: 68,
+          problem: 66,
+          teamwork: 69,
+        },
+      },
+      {
+        id: 'm4',
+        name: 'Pham Thi D',
+        avatar: 'https://randomuser.me/api/portraits/women/55.jpg',
+        overallScore: 80,
+        improvement: 3,
+        lastActivity: '2025-10-25 11:20',
+        categories: {
+          coding: 82,
+          communication: 76,
+          project: 84,
+          problem: 80,
+          teamwork: 85,
+        },
+      },
+    ];
+    setMenteeStats(mockMentees);
+    setLoading(false);
   }, []);
 
   const monthlyProgressData = [

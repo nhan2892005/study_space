@@ -4,21 +4,23 @@ import { prisma } from '@/lib/prisma';
 import MenteeCard from '@/components/mentor/MenteeCard';
 
 export default async function MyMenteesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return <div className="p-8">Vui lòng đăng nhập</div>;
-
-  const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true, role: true } });
-  if (!user) return <div className="p-8">Người dùng không tồn tại</div>;
-  if (user.role !== 'MENTOR') return <div className="p-8">Trang này dành cho Mentor</div>;
-
-  const connections = await prisma.menteeConnection.findMany({ where: { mentorId: user.id, status: 'ACCEPTED' }, include: { mentee: { select: { id: true, name: true, email: true, image: true } } } });
+  // MOCK DATA DEMO
+  const mockConnections = Array.from({ length: 5 }).map((_, i) => ({
+    id: `conn${i+1}`,
+    mentee: {
+      id: `mentee${i+1}`,
+      name: `Mentee ${i+1} - ${i % 2 === 0 ? 'Nguyen Van' : 'Tran Thi'}`,
+      email: `mentee${i+1}@example.com`,
+      image: `https://randomuser.me/api/portraits/${i % 2 === 0 ? 'men' : 'women'}/${30 + i}.jpg`,
+    }
+  }));
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Danh sách Mentee của tôi</h1>
       <div className="space-y-4">
-        {connections.length === 0 ? <div>Chưa có mentee nào</div> : (
-          connections.map((c:any) => (
+        {mockConnections.length === 0 ? <div>Chưa có mentee nào</div> : (
+          mockConnections.map((c:any) => (
             <MenteeCard key={c.id} connection={c} />
           ))
         )}

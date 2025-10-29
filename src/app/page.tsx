@@ -10,45 +10,59 @@ import type { ExtendedPost } from "@/types/post";
 import RoleAssigner from '@/components/auth/RoleAssigner';
 // remove mockMentors import — we'll fetch top mentors from DB
 
-async function getPosts(page: number = 1, limit: number = 5) {
-  const skip = (page - 1) * limit;
-  
-  const [posts, total] = await Promise.all([
-    prisma.post.findMany({
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            role: true
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          }
-        },
-        reactions: true
+// MOCK POSTS DATA
+function getMockPosts(page: number = 1, limit: number = 5) {
+  const total = 30;
+  const pages = Math.ceil(total / limit);
+  const posts = Array.from({ length: limit }).map((_, idx) => {
+    const id = `post${(page-1)*limit + idx + 1}`;
+    return {
+      id,
+      content: `Bài viết demo số ${id}. Đây là nội dung mô phỏng cho bài viết trên bảng tin.`,
+      createdAt: new Date(Date.now() - (idx * 3600 * 1000)),
+      updatedAt: new Date(Date.now() - (idx * 3500 * 1000)),
+      images: [],
+      published: true,
+      author: {
+        id: `user${idx+1}`,
+        name: `Người dùng ${idx+1}`,
+        image: `https://randomuser.me/api/portraits/${idx % 2 === 0 ? 'men' : 'women'}/${30 + idx}.jpg`,
+        role: 'MENTEE' as 'MENTEE',
       },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit
-    }),
-    prisma.post.count()
-  ]);
-
+      comments: [
+        {
+          id: `cmt${id}-1`,
+          content: 'Bình luận mẫu 1',
+          createdAt: new Date(Date.now() - (idx * 3400 * 1000)),
+          authorId: `user${idx+2}`,
+          postId: id,
+          author: {
+            id: `user${idx+2}`,
+            name: `Người dùng ${idx+2}`,
+            image: `https://randomuser.me/api/portraits/men/${40 + idx}.jpg`,
+          }
+        },
+        {
+          id: `cmt${id}-2`,
+          content: 'Bình luận mẫu 2',
+          createdAt: new Date(Date.now() - (idx * 3300 * 1000)),
+          authorId: `user${idx+3}`,
+          postId: id,
+          author: {
+            id: `user${idx+3}`,
+            name: `Người dùng ${idx+3}`,
+            image: `https://randomuser.me/api/portraits/women/${50 + idx}.jpg`,
+          }
+        }
+      ],
+      reactions: [],
+    };
+  });
   return {
-    posts: posts as ExtendedPost[],
+    posts,
     pagination: {
       total,
-      pages: Math.ceil(total / limit),
+      pages,
       current: page
     }
   };
@@ -59,37 +73,33 @@ export default async function Home({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const session = await getServerSession(authOptions);
-  const userRole = session?.user?.role || 'guest';
+  // MOCK SESSION & ROLE
+  const session = { user: { role: 'mentee' } };
+  const userRole = session.user.role;
   const page = Number(searchParams['page']) || 1;
-  const { posts, pagination } = await getPosts(page);
-  // Fetch top mentors from DB (by MentorProfile.rating)
-  const mentorProfiles = await prisma.mentorProfile.findMany({
-    orderBy: [{ rating: 'desc' }, { totalReviews: 'desc' }],
-    take: 10,
-    include: { user: { select: { id: true, name: true, image: true, department: true, achievements: true, email: true } } }
-  });
+  const { posts, pagination } = getMockPosts(page);
 
-  // For each mentor, compute current mentees count
-  const mentors = await Promise.all(mentorProfiles.map(async (mp:any) => {
-    const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });
-    return {
-      id: mp.userId,
-      name: mp.user?.name || 'Unknown',
-      avatar: mp.user?.image || `https://api.dicebear.com/9.x/avataaars/png?seed=${mp.userId}`,
-      role: 'lecturer' as const, // map DB MENTOR role to display role; adjust if you have subtypes
-      year: undefined,
-      department: mp.user?.department || 'Unknown',
-      currentMentees,
-      maxMentees: mp.maxMentees,
-      rating: mp.rating,
-      totalReviews: mp.totalReviews,
-      availableDays: Array.isArray(mp.availableDays) ? mp.availableDays.length : 0,
-      expertise: mp.expertise || [],
-      achievements: mp.user?.achievements || [],
-      contact: { email: mp.user?.email || '' },
-      schedule: [],
-    };
+  // MOCK MENTORS DATA
+  const mentors = Array.from({ length: 10 }).map((_, i) => ({
+    id: `mentor${i+1}`,
+    name: `Mentor ${i+1} - ${i % 2 === 0 ? 'Nguyen Van' : 'Tran Thi'}`,
+    avatar: `https://randomuser.me/api/portraits/${i % 2 === 0 ? 'men' : 'women'}/${30 + i}.jpg`,
+    role: (i % 3 === 0 ? 'lecturer' : 'student') as 'lecturer' | 'student',
+    year: i % 3 === 0 ? undefined : (2 + (i % 4)),
+    department: ['Computer Science', 'Information Systems', 'Software Engineering', 'Data Science'][i % 4],
+    currentMentees: Math.floor(Math.random() * 5),
+    maxMentees: 3 + (i % 4),
+    rating: 4 + Math.random(),
+    totalReviews: 5 + Math.floor(Math.random() * 30),
+    availableDays: 2 + (i % 5),
+    expertise: [
+      'AI', 'Web Dev', 'Algorithms', 'Database', 'Project Management', 'Mobile Dev', 'UI/UX', 'Machine Learning', 'Big Data'
+    ].filter((_, idx) => idx % (i % 5 + 1) === 0),
+    achievements: [
+      'Best Lecturer 2024', 'Top Mentor', 'Hackathon Winner', 'App Award 2025', 'Data Science Award'
+    ].filter((_, idx) => idx % (i % 3 + 1) === 0),
+    contact: { email: `mentor${i+1}@univ.edu` },
+    schedule: [],
   }));
 
   return (

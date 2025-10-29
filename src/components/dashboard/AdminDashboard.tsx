@@ -41,30 +41,52 @@ const AdminDashboard = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [loading, setLoading] = useState(true);
 
+  // MOCK DATA
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/dashboard/admin');
-        if (!res.ok) {
-          throw new Error(`Failed to fetch admin dashboard: ${res.status}`);
-        }
-        const data = await res.json();
-        if (!mounted) return;
-        setSystemStats(data.systemStats || null);
-        setMentorStats(data.mentorStats || []);
-        setActivityData(data.activityData || []);
-      } catch (err) {
-        console.error('Error loading admin dashboard:', err);
-        // keep existing state as empty/null
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    setLoading(true);
+    // System stats
+    const mockSystemStats: SystemStats = {
+      totalUsers: 1200,
+      totalMentors: 48,
+      totalMentees: 1152,
+      activeConnections: 980,
+      averageRating: 4.6,
+      monthlyGrowth: 7.2,
     };
 
-    load();
-    return () => { mounted = false; };
+    // Mentor stats
+    const mockMentorStats: MentorStats[] = Array.from({ length: 30 }).map((_, i) => ({
+      id: `mentor${i+1}`,
+      name: `Mentor ${i+1} - ${i % 2 === 0 ? 'Nguyen Van' : 'Tran Thi'}`,
+      email: `mentor${i+1}@example.com`,
+      department: ['Khoa học máy tính', 'Công nghệ thông tin', 'Kỹ thuật phần mềm', 'Trí tuệ nhân tạo', 'An toàn thông tin', 'Khác'][i % 6],
+      menteeCount: 2 + (i % 5),
+      averageRating: 4 + Math.random(),
+      totalReviews: 10 + Math.floor(Math.random() * 40),
+      joinDate: `2025-0${(i % 9) + 1}-01`,
+      status: (i % 7 === 0 ? 'pending' : (i % 5 === 0 ? 'inactive' : 'active')) as 'active' | 'inactive' | 'pending',
+      completedSessions: 5 + Math.floor(Math.random() * 30),
+    }));
+
+    // Activity data
+    const today = new Date();
+    const mockActivityData: PlatformActivity[] = Array.from({ length: 90 }).map((_, i) => {
+      const date = new Date(today.getTime() - (89 - i) * 24 * 3600 * 1000);
+      return {
+        date: date.toISOString().split('T')[0],
+        newUsers: 10 + Math.floor(Math.random() * 15),
+        sessions: 30 + Math.floor(Math.random() * 40),
+        messages: 100 + Math.floor(Math.random() * 200),
+        reviews: 5 + Math.floor(Math.random() * 10),
+      };
+    });
+
+    setTimeout(() => {
+      setSystemStats(mockSystemStats);
+      setMentorStats(mockMentorStats);
+      setActivityData(mockActivityData);
+      setLoading(false);
+    }, 500);
   }, []);
 
   const departmentData = [

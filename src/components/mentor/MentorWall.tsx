@@ -5,7 +5,51 @@ import React from 'react';
 import StarRating from './StarRating'; // Adjust the import path as needed
 
 export default function MentorWall({ mentorData, currentUserEmail }: any) {
-  const { user, posts, reviews } = mentorData;
+  // Mock data for demo
+  const mockMentor = {
+    user: {
+      id: 'mentor1',
+      name: 'Nguyen Van Mentor',
+      image: 'https://randomuser.me/api/portraits/men/45.jpg',
+      role: 'MENTOR',
+    },
+    posts: [
+      { id: 'p1', content: 'Chia sẻ về kỹ năng quản lý thời gian hiệu quả.' },
+      { id: 'p2', content: 'Hướng dẫn giải quyết xung đột trong nhóm.' },
+      { id: 'p3', content: 'Kinh nghiệm phỏng vấn xin việc ngành IT.' },
+    ],
+    reviews: [
+      {
+        id: 'r1',
+        reviewer: {
+          name: 'Tran Thi B',
+          image: 'https://randomuser.me/api/portraits/women/44.jpg',
+        },
+        rating: 4.8,
+        comment: 'Mentor rất nhiệt tình và hỗ trợ tốt!'
+      },
+      {
+        id: 'r2',
+        reviewer: {
+          name: 'Le Van C',
+          image: 'https://randomuser.me/api/portraits/men/65.jpg',
+        },
+        rating: 4.5,
+        comment: 'Giải thích rõ ràng, dễ hiểu.'
+      },
+      {
+        id: 'r3',
+        reviewer: {
+          name: 'Pham Thi D',
+          image: 'https://randomuser.me/api/portraits/women/55.jpg',
+        },
+        rating: 5.0,
+        comment: 'Rất hài lòng với sự hướng dẫn.'
+      },
+    ],
+  };
+
+  const { user, posts, reviews } = mockMentor || mentorData;
 
   const [rating, setRating] = React.useState(5);
   const [comment, setComment] = React.useState('');
@@ -14,13 +58,8 @@ export default function MentorWall({ mentorData, currentUserEmail }: any) {
   async function submitReview() {
     try {
       setSubmitting(true);
-      const res = await fetch(`/api/mentors/${user.id}/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating, comment }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed');
+      // Simulate API for demo
+      await new Promise(res => setTimeout(res, 500));
       alert('Review submitted');
       setComment('');
     } catch (err) {
@@ -31,11 +70,9 @@ export default function MentorWall({ mentorData, currentUserEmail }: any) {
 
   async function handleRequest() {
     try {
-      const res = await fetch(`/api/mentors/${user.id}`, { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) alert('Request sent');
-      else alert(data?.error || 'Failed');
-      // Optionally you could trigger a refresh
+      // Simulate API for demo
+      await new Promise(res => setTimeout(res, 500));
+      alert('Request sent');
     } catch (err) {
       alert('Network error');
     }
