@@ -1,0 +1,42 @@
+@startuml
+title Screen Flow: Mentor
+skinparam backgroundColor #ffffff
+skinparam rectangle {
+  BackgroundColor #ffffff
+  BorderColor #000000
+  FontColor #000000
+}
+skinparam arrowColor #a6e3a1
+skinparam noteBackgroundColor #ffffff
+skinparam noteBorderColor #f38ba8
+
+' Màn hình
+rectangle "Bảng tin trang chủ\n" as home
+rectangle "Danh sách Mentee\n" as mentor_list
+rectangle "Chat nhóm\n" as chat_group
+rectangle "Chat AI\n" as chatbot
+rectangle "Dashboard quản lý tiến độ các mentee\n" as mentee_dash
+
+' Luồng
+home --> home : Đăng nhập thành công
+home --> mentor_list : Xem danh sách mentee mình hướng dẫn
+home --> chat_group : Mở kênh chat
+home --> chatbot : Mở AI Assistant
+mentor_list --> mentor_list : Chấm điểm mentee
+chat_group --> chat_group : Gửi tin/file, tạo thêm server/kênh chat
+chatbot --> chatbot : Hỏi → Trả lời
+home --> mentee_dash : Xem báo cáo
+mentee_dash --> mentee_dash : Xuất báo cáo
+
+' Ghi chú
+note top of home
+  - Bảng tin bài đăng
+  - Sidebar gợi ý mentor
+  - Các thông báo
+end note
+
+note bottom of mentor_list
+  Hiển thị lịch sử chấm điểm
+end note
+
+@enduml

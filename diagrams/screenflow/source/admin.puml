@@ -1,0 +1,38 @@
+@startuml
+title Screen Flow: Admin
+skinparam backgroundColor #ffffff
+skinparam rectangle {
+  BackgroundColor #ffffff
+  BorderColor #000000
+  FontColor #000000
+}
+skinparam arrowColor #a6e3a1
+skinparam noteBackgroundColor #ffffff
+skinparam noteBorderColor #f38ba8
+
+rectangle "Trang chủ" as login_a
+rectangle "2. Admin Dashboard\n" as admin_dash
+rectangle "3. Quản lý RAG\n" as rag_page
+rectangle "4. Quản lý Mentor\n" as mentor_admin
+
+' Luồng
+login_a --> login_a : Đăng nhập (Admin)
+login_a --> admin_dash : Xem báo cáo quản lý mentor-mentee
+login_a --> rag_page : Quản lý chatbot
+admin_dash --> mentor_admin : Quản lý mentor
+rag_page --> rag_page : Index Các thông tin hệ thống và tài liệu
+mentor_admin --> mentor_admin : Duyệt / Xóa / Chỉnh sửa
+admin_dash --> admin_dash : Xuất báo cáo CSV
+
+note left of admin_dash
+  - Tổng người dùng
+  - Mentor/Mentee
+  - Biểu đồ hoạt động
+end note
+
+note bottom of rag_page
+  Hiển thị đã index bao nhiêu % thông tin
+  Nút: Index All
+end note
+
+@enduml
