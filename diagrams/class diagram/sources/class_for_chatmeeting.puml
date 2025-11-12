@@ -1,0 +1,354 @@
+@startuml
+title Class Diagram - Chat & Meeting Module
+
+' ==================== CONTROLLERS ====================
+package "Controllers" {
+  class ServerController {
+    - serverService: ServerService
+    - invitationService: InvitationService
+    --
+    + POST createServer(data): Response
+    + GET getServers(): Response
+    + POST inviteMember(serverId, email): Response
+  }
+  
+  class ChannelController {
+    - channelService: ChannelService
+    - messageService: MessageService
+    --
+    + POST createChannel(serverId, data): Response
+    + GET getChannels(serverId): Response
+    + GET getChannel(channelId): Response
+    + PATCH updateChannel(channelId, data): Response
+    + DELETE deleteChannel(channelId): Response
+  }
+  
+  class MessageController {
+    - messageService: MessageService
+    - fileService: FileService
+    --
+    + GET getMessages(channelId): Response
+    + POST sendMessage(channelId, data): Response
+  }
+}
+
+' ==================== DTOs ====================
+package "DTOs" {
+  class CreateServerDTO {
+    + name: string
+    + description?: string
+    + image?: string
+    + ownerId: string
+    --
+    + validate(): boolean
+  }
+  
+  class CreateChannelDTO {
+    + name: string
+    + type: ChannelType
+    + description?: string
+    + serverId: string
+    --
+    + validate(): boolean
+  }
+  
+  class SendMessageDTO {
+    + content: string
+    + type: MessageType
+    + channelId: string
+    + authorId: string
+    + files?: FileData[]
+    --
+    + validate(): boolean
+  }
+  
+  class InvitationDTO {
+    + serverId: string
+    + invitedUserId: string
+    + invitedById: string
+    --
+    + validate(): boolean
+  }
+  
+  class MessageResponseDTO {
+    + id: string
+    + content: string
+    + type: MessageType
+    + author: AuthorDTO
+    + files: FileDTO[]
+    + timestamp: Date
+    --
+    + toJSON(): object
+  }
+}
+
+' ==================== SERVICES ====================
+package "Services" {
+  class ServerService {
+    - serverRepository: ServerRepository
+    - memberRepository: MemberRepository
+    --
+    + createServer(data): Promise<ChatServer>
+    + getServers(userId): Promise<ChatServer[]>
+    + getServer(id): Promise<ChatServer>
+    + updateServer(id, data): Promise<ChatServer>
+    + deleteServer(id): Promise<void>
+  }
+  
+  class ChannelService {
+    - channelRepository: ChannelRepository
+    --
+    + createChannel(data): Promise<Channel>
+    + getChannels(serverId): Promise<Channel[]>
+    + getChannel(id): Promise<Channel>
+    + updateChannel(id, data): Promise<Channel>
+    + deleteChannel(id): Promise<void>
+  }
+  
+  class MessageService {
+    - messageRepository: MessageRepository
+    - fileService: FileService
+    --
+    + sendMessage(data): Promise<Message>
+    + getMessages(channelId, limit): Promise<Message[]>
+    + deleteMessage(id): Promise<void>
+  }
+  
+  class InvitationService {
+    - invitationRepository: InvitationRepository
+    - notificationService: NotificationService
+    --
+    + createInvitation(data): Promise<Invitation>
+    + respondInvitation(id, status): Promise<Invitation>
+    + getInvitations(userId): Promise<Invitation[]>
+  }
+  
+  class FileService {
+    - fileRepository: FileRepository
+    - cloudinary: CloudinaryAPI
+    --
+    + uploadFile(file): Promise<string>
+    + uploadFiles(files): Promise<string[]>
+    + deleteFile(url): Promise<void>
+  }
+  
+  class MeetingService {
+    - channelService: ChannelService
+    - mediasoupService: MediasoupService
+    --
+    + startMeeting(channelId, hostId): Promise<Meeting>
+    + joinMeeting(channelId, userId): Promise<void>
+    + leaveMeeting(channelId, userId): Promise<void>
+    + endMeeting(channelId): Promise<void>
+    + getMeetingState(channelId): Promise<MeetingState>
+  }
+}
+
+' ==================== REPOSITORIES ====================
+package "Repositories" {
+  class ServerRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<ChatServer>
+    + findById(id): Promise<ChatServer>
+    + findByUser(userId): Promise<ChatServer[]>
+    + update(id, data): Promise<ChatServer>
+    + delete(id): Promise<void>
+  }
+  
+  class ChannelRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<Channel>
+    + findById(id): Promise<Channel>
+    + findByServer(serverId): Promise<Channel[]>
+    + update(id, data): Promise<Channel>
+    + delete(id): Promise<void>
+  }
+  
+  class MessageRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<Message>
+    + findById(id): Promise<Message>
+    + findByChannel(channelId, limit): Promise<Message[]>
+    + delete(id): Promise<void>
+  }
+  
+  class FileRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<File>
+    + findById(id): Promise<File>
+    + findByMessage(messageId): Promise<File[]>
+    + delete(id): Promise<void>
+  }
+  
+  class InvitationRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<ServerInvitation>
+    + findById(id): Promise<ServerInvitation>
+    + findByUser(userId): Promise<ServerInvitation[]>
+    + update(id, data): Promise<ServerInvitation>
+  }
+}
+
+' ==================== ENTITIES ====================
+package "Entities" {
+  class ChatServer {
+    + id: string
+    + name: string
+    + description?: string
+    + image?: string
+    + ownerId: string
+    + owner: User
+    + members: ServerMember[]
+    + channels: Channel[]
+    + invitations: ServerInvitation[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + getMemberCount(): number
+    + hasChannel(name): boolean
+  }
+  
+  class Channel {
+    + id: string
+    + name: string
+    + type: ChannelType
+    + description?: string
+    + serverId: string
+    + server: ChatServer
+    + messages: Message[]
+    + recordings: Recording[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isTextChannel(): boolean
+    + isVoiceChannel(): boolean
+  }
+  
+  class Message {
+    + id: string
+    + content: string
+    + type: MessageType
+    + authorId: string
+    + author: User
+    + channelId: string
+    + channel: Channel
+    + files: File[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + hasFiles(): boolean
+    + isSystemMessage(): boolean
+  }
+  
+  class File {
+    + id: string
+    + name: string
+    + url: string
+    + type: FileType
+    + size: number
+    + messageId: string
+    + message: Message
+    + createdAt: Date
+    --
+    + isImage(): boolean
+    + isVideo(): boolean
+  }
+  
+  class ServerMember {
+    + id: string
+    + serverId: string
+    + server: ChatServer
+    + userId: string
+    + user: User
+    + role: MemberRole
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isOwner(): boolean
+    + isAdmin(): boolean
+  }
+  
+  class ServerInvitation {
+    + id: string
+    + serverId: string
+    + server: ChatServer
+    + invitedUserId: string
+    + invitedUser: User
+    + invitedById: string
+    + invitedBy: User
+    + status: InvitationStatus
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isPending(): boolean
+    + isAccepted(): boolean
+  }
+  
+  enum ChannelType {
+    TEXT
+    VOICE
+    VIDEO
+    STREAMING
+  }
+  
+  enum MessageType {
+    TEXT
+    FILE
+    SYSTEM
+  }
+  
+  enum FileType {
+    IMAGE
+    DOCUMENT
+    VIDEO
+    AUDIO
+  }
+  
+  enum MemberRole {
+    OWNER
+    ADMIN
+    MEMBER
+  }
+  
+  enum InvitationStatus {
+    PENDING
+    ACCEPTED
+    DECLINED
+  }
+}
+
+' ==================== RELATIONSHIPS ====================
+ServerController --> ServerService
+ChannelController --> ChannelService
+MessageController --> MessageService
+
+ServerService --> ServerRepository
+ChannelService --> ChannelRepository
+MessageService --> MessageRepository
+InvitationService --> InvitationRepository
+FileService --> FileRepository
+
+ServerRepository --> ChatServer
+ChannelRepository --> Channel
+MessageRepository --> Message
+FileRepository --> File
+InvitationRepository --> ServerInvitation
+
+ChatServer "1" *-- "many" Channel
+ChatServer "1" *-- "many" ServerMember
+ChatServer "1" *-- "many" ServerInvitation
+Channel "1" *-- "many" Message
+Message "1" *-- "many" File
+
+Channel --> ChannelType
+Message --> MessageType
+File --> FileType
+ServerMember --> MemberRole
+ServerInvitation --> InvitationStatus
+
+@enduml

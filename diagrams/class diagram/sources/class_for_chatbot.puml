@@ -1,0 +1,330 @@
+@startuml
+title Class Diagram - RAG Chatbot Module
+
+' ==================== CONTROLLERS ====================
+package "Controllers" {
+  class ChatbotController {
+    - chatbotService: ChatbotService
+    - conversationService: ConversationService
+    --
+    + POST chat(message, conversationId): Response
+    + POST streamChat(message, conversationId): StreamResponse
+    + GET getConversations(): Response
+    + GET getConversation(id): Response
+    + DELETE deleteConversation(id): Response
+  }
+  
+  class RAGController {
+    - ragService: RAGService
+    - embeddingService: EmbeddingService
+    - authService: AuthService
+    --
+    + POST indexDocuments(types): Response
+    + GET getStats(): Response
+    + DELETE deleteIndex(filter): Response
+  }
+}
+
+' ==================== DTOs ====================
+package "DTOs" {
+  class ChatRequestDTO {
+    + message: string
+    + conversationId?: string
+    --
+    + validate(): boolean
+  }
+  
+  class ChatResponseDTO {
+    + message: string
+    + sources: SourceDTO[]
+    + conversationId: string
+    + followUpQuestions: string[]
+    + usage: UsageDTO
+    --
+    + toJSON(): object
+  }
+  
+  class IndexRequestDTO {
+    + types: DocumentType[]
+    --
+    + validate(): boolean
+  }
+  
+  class DocumentDTO {
+    + id: string
+    + content: string
+    + metadata: MetadataDTO
+    --
+    + validate(): boolean
+  }
+  
+  class SourceDTO {
+    + id: string
+    + score: number
+    + metadata: MetadataDTO
+    + snippet: string
+    --
+    + toJSON(): object
+  }
+  
+  class UsageDTO {
+    + promptTokens: number
+    + completionTokens: number
+    + totalTokens: number
+    --
+    + getCost(): number
+  }
+}
+
+' ==================== SERVICES ====================
+package "Services" {
+  class ChatbotService {
+    - ragChatbot: RAGChatbot
+    - conversationRepository: ConversationRepository
+    - messageRepository: MessageRepository
+    --
+    + chat(message, history, filter): Promise<ChatResponse>
+    + streamChat(message, history, onChunk): Promise<ChatResponse>
+    + saveConversation(userId, messages): Promise<Conversation>
+    + generateFollowUp(conversation): Promise<string[]>
+  }
+  
+  class RAGService {
+    - vectorStore: VectorStore
+    - embeddingService: EmbeddingService
+    - userRepository: UserRepository
+    - postRepository: PostRepository
+    --
+    + indexDocuments(types): Promise<IndexResult>
+    + formatDocuments(data, type): Document[]
+    + getStats(): Promise<Stats>
+    + deleteByFilter(filter): Promise<void>
+  }
+  
+  class EmbeddingService {
+    - geminiClient: GoogleGenerativeAI
+    - dimension: number
+    --
+    + generateEmbedding(text): Promise<number[]>
+    + generateEmbeddings(texts): Promise<number[][]>
+    + batchEmbed(texts, batchSize): Promise<number[][]>
+  }
+  
+  class ConversationService {
+    - conversationRepository: ConversationRepository
+    - messageRepository: MessageRepository
+    --
+    + createConversation(userId, title): Promise<Conversation>
+    + getConversations(userId): Promise<Conversation[]>
+    + getConversation(id): Promise<Conversation>
+    + deleteConversation(id): Promise<void>
+    + updateTitle(id, title): Promise<Conversation>
+  }
+}
+
+' ==================== RAG COMPONENTS ====================
+package "RAG Components" {
+  class RAGChatbot {
+    - model: GenerativeModel
+    - systemInstruction: string
+    --
+    + chat(message, history, options): Promise<ChatResult>
+    + chatStream(message, history, onChunk): Promise<void>
+    + generateFollowUpQuestions(conversation): Promise<string[]>
+    - buildContext(docs): string
+    - constructPrompt(message, context): string
+  }
+  
+  class VectorStore {
+    - pinecone: Pinecone
+    - indexName: string
+    - embeddingModel: EmbeddingModel
+    - embeddingDimension: number
+    --
+    + addDocuments(documents): Promise<AddResult>
+    + similaritySearch(query, topK, filter): Promise<Document[]>
+    + updateMetadata(id, metadata): Promise<void>
+    + deleteDocuments(ids): Promise<void>
+    + deleteByFilter(filter): Promise<void>
+    + getStats(): Promise<Stats>
+  }
+  
+  class EmbeddingModel {
+    - model: GenerativeModel
+    - taskType: TaskType
+    - outputDimension: number
+    --
+    + embed(text): Promise<number[]>
+    + embedBatch(texts): Promise<number[][]>
+  }
+}
+
+' ==================== REPOSITORIES ====================
+package "Repositories" {
+  class ConversationRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<ChatConversation>
+    + findById(id): Promise<ChatConversation>
+    + findByUser(userId): Promise<ChatConversation[]>
+    + update(id, data): Promise<ChatConversation>
+    + delete(id): Promise<void>
+  }
+  
+  class MessageRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<ChatMessage>
+    + findByConversation(conversationId): Promise<ChatMessage[]>
+    + findRecent(conversationId, limit): Promise<ChatMessage[]>
+    + deleteByConversation(conversationId): Promise<void>
+  }
+}
+
+' ==================== ENTITIES ====================
+package "Entities" {
+  class ChatConversation {
+    + id: string
+    + userId: string
+    + user: User
+    + title?: string
+    + messages: ChatMessage[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + getMessageCount(): number
+    + getLastMessage(): ChatMessage
+  }
+  
+  class ChatMessage {
+    + id: string
+    + conversationId: string
+    + conversation: ChatConversation
+    + role: MessageRole
+    + content: string
+    + createdAt: Date
+    --
+    + isUserMessage(): boolean
+    + isAssistantMessage(): boolean
+  }
+  
+  class Document {
+    + id: string
+    + content: string
+    + embedding: number[]
+    + metadata: DocumentMetadata
+    --
+    + getScore(query): number
+  }
+  
+  class DocumentMetadata {
+    + type: DocumentType
+    + sourceId: string
+    + sourceName?: string
+    + timestamp: number
+    + [key: string]: any
+    --
+    + toJSON(): object
+  }
+  
+  enum MessageRole {
+    USER
+    ASSISTANT
+    SYSTEM
+  }
+  
+  enum DocumentType {
+    MENTOR
+    POST
+    GENERAL
+    FAQ
+  }
+  
+  enum TaskType {
+    RETRIEVAL_DOCUMENT
+    RETRIEVAL_QUERY
+    SEMANTIC_SIMILARITY
+    CLASSIFICATION
+  }
+}
+
+' ==================== EXTERNAL SERVICES ====================
+package "External Services" {
+  class GoogleGenerativeAI {
+    - apiKey: string
+    --
+    + getGenerativeModel(config): GenerativeModel
+  }
+  
+  class GenerativeModel {
+    - modelName: string
+    - systemInstruction?: string
+    --
+    + generateContent(prompt): Promise<Response>
+    + generateContentStream(prompt): AsyncGenerator
+    + startChat(config): Chat
+    + embedContent(config): Promise<EmbedResult>
+  }
+  
+  class Pinecone {
+    - apiKey: string
+    - environment: string
+    --
+    + index(name): Index
+  }
+  
+  class Index {
+    - name: string
+    --
+    + upsert(vectors): Promise<void>
+    + query(config): Promise<QueryResult>
+    + update(config): Promise<void>
+    + delete(ids): Promise<void>
+    + describeIndexStats(): Promise<Stats>
+  }
+}
+
+' ==================== RELATIONSHIPS ====================
+ChatbotController --> ChatbotService
+ChatbotController --> ConversationService
+ChatbotController --> ChatRequestDTO
+ChatbotController --> ChatResponseDTO
+
+RAGController --> RAGService
+RAGController --> EmbeddingService
+RAGController --> IndexRequestDTO
+
+ChatbotService --> RAGChatbot
+ChatbotService --> ConversationRepository
+ChatbotService --> MessageRepository
+
+RAGService --> VectorStore
+RAGService --> EmbeddingService
+
+RAGChatbot --> VectorStore
+RAGChatbot --> GenerativeModel
+
+VectorStore --> Pinecone
+VectorStore --> EmbeddingModel
+VectorStore --> Document
+
+EmbeddingService --> GoogleGenerativeAI
+EmbeddingService --> GenerativeModel
+
+ConversationService --> ConversationRepository
+ConversationService --> MessageRepository
+
+ConversationRepository --> ChatConversation
+MessageRepository --> ChatMessage
+
+ChatConversation "1" *-- "many" ChatMessage
+
+Document --> DocumentMetadata
+Document --> DocumentType
+ChatMessage --> MessageRole
+EmbeddingModel --> TaskType
+
+Pinecone --> Index
+GoogleGenerativeAI --> GenerativeModel
+
+@enduml

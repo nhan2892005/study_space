@@ -1,0 +1,386 @@
+@startuml
+title Class Diagram - Dashboard & Analytics Module
+
+' ==================== CONTROLLERS ====================
+package "Controllers" {
+  class DashboardController {
+    - dashboardService: DashboardService
+    - analyticsService: AnalyticsService
+    --
+    + GET getAdminDashboard(): Response
+    + GET getMentorDashboard(): Response
+    + GET getMenteeDashboard(): Response
+  }
+  
+  class ProgressController {
+    - progressService: ProgressService
+    --
+    + POST recordProgress(data): Response
+    + GET getProgress(menteeId): Response
+    + GET getProgressByCategory(menteeId, category): Response
+  }
+  
+  class EventController {
+    - eventService: EventService
+    - notificationService: NotificationService
+    --
+    + POST createEvent(data): Response
+    + GET getEvents(userId): Response
+    + PATCH updateEvent(id, data): Response
+    + DELETE deleteEvent(id): Response
+  }
+}
+
+' ==================== DTOs ====================
+package "DTOs" {
+  class AdminDashboardDTO {
+    + systemStats: SystemStatsDTO
+    + mentorStats: MentorStatsDTO[]
+    + activityData: ActivityDataDTO[]
+    --
+    + toJSON(): object
+  }
+  
+  class MentorDashboardDTO {
+    + menteeStats: MenteeStatsDTO[]
+    + mentorProfile: MentorProfileDTO
+    --
+    + toJSON(): object
+  }
+  
+  class MenteeDashboardDTO {
+    + progressData: ProgressDataDTO[]
+    + events: EventDTO[]
+    + recentFeedback: FeedbackDTO[]
+    --
+    + toJSON(): object
+  }
+  
+  class ProgressRecordDTO {
+    + menteeId: string
+    + category: string
+    + subcategory?: string
+    + score: number
+    + maxScore: number
+    + notes?: string
+    + recordedBy: string
+    --
+    + validate(): boolean
+  }
+  
+  class EventDTO {
+    + title: string
+    + description?: string
+    + startTime: Date
+    + endTime: Date
+    + type: EventType
+    + priority: Priority
+    + location?: string
+    + creatorId: string
+    + assigneeIds: string[]
+    --
+    + validate(): boolean
+  }
+}
+
+' ==================== SERVICES ====================
+package "Services" {
+  class DashboardService {
+    - userRepository: UserRepository
+    - mentorRepository: MentorRepository
+    - connectionRepository: ConnectionRepository
+    - progressRepository: ProgressRepository
+    --
+    + getAdminDashboard(): Promise<AdminDashboardData>
+    + getMentorDashboard(userId): Promise<MentorDashboardData>
+    + getMenteeDashboard(userId): Promise<MenteeDashboardData>
+    + generateReport(userId, role): Promise<ReportData>
+  }
+  
+  class ProgressService {
+    - progressRepository: ProgressRepository
+    --
+    + recordProgress(data): Promise<ProgressRecord>
+    + getProgress(menteeId): Promise<ProgressRecord[]>
+    + getProgressByCategory(menteeId, category): Promise<ProgressRecord[]>
+    + calculateImprovement(menteeId): Promise<ImprovementData>
+    + getLatestScores(menteeId): Promise<CategoryScores>
+  }
+  
+  class EventService {
+    - eventRepository: EventRepository
+    - assignmentRepository: AssignmentRepository
+    - reminderRepository: ReminderRepository
+    --
+    + createEvent(data): Promise<CalendarEvent>
+    + getEvents(userId): Promise<CalendarEvent[]>
+    + updateEvent(id, data): Promise<CalendarEvent>
+    + deleteEvent(id): Promise<void>
+    + getUpcomingEvents(userId, limit): Promise<CalendarEvent[]>
+  }
+  
+  class AnalyticsService {
+    - analyticsRepository: AnalyticsRepository
+    --
+    + createView(userId, config): Promise<AnalyticsView>
+    + getViews(userId): Promise<AnalyticsView[]>
+    + updateView(id, config): Promise<AnalyticsView>
+    + deleteView(id): Promise<void>
+  }
+  
+  class NotificationService {
+    - notificationRepository: NotificationRepository
+    --
+    + createNotification(data): Promise<Notification>
+    + getNotifications(userId): Promise<Notification[]>
+    + markAsRead(id): Promise<void>
+    + deleteNotification(id): Promise<void>
+  }
+}
+
+' ==================== REPOSITORIES ====================
+package "Repositories" {
+  class ProgressRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<ProgressRecord>
+    + findByMentee(menteeId): Promise<ProgressRecord[]>
+    + findByCategory(menteeId, category): Promise<ProgressRecord[]>
+    + findLatest(menteeId): Promise<ProgressRecord[]>
+  }
+  
+  class EventRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<CalendarEvent>
+    + findById(id): Promise<CalendarEvent>
+    + findByUser(userId): Promise<CalendarEvent[]>
+    + update(id, data): Promise<CalendarEvent>
+    + delete(id): Promise<void>
+    + findUpcoming(userId, date): Promise<CalendarEvent[]>
+  }
+  
+  class AssignmentRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<EventAssignment>
+    + findByEvent(eventId): Promise<EventAssignment[]>
+    + findByUser(userId): Promise<EventAssignment[]>
+    + update(id, data): Promise<EventAssignment>
+  }
+  
+  class ReminderRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<EventReminder>
+    + findByEvent(eventId): Promise<EventReminder[]>
+    + findActive(date): Promise<EventReminder[]>
+    + update(id, data): Promise<EventReminder>
+  }
+  
+  class NotificationRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<Notification>
+    + findByUser(userId): Promise<Notification[]>
+    + findUnread(userId): Promise<Notification[]>
+    + markAsRead(id): Promise<void>
+    + delete(id): Promise<void>
+  }
+  
+  class AnalyticsRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<AnalyticsView>
+    + findByUser(userId): Promise<AnalyticsView[]>
+    + update(id, data): Promise<AnalyticsView>
+    + delete(id): Promise<void>
+  }
+}
+
+' ==================== ENTITIES ====================
+package "Entities" {
+  class ProgressRecord {
+    + id: string
+    + menteeId: string
+    + mentee: User
+    + category: string
+    + subcategory?: string
+    + score: number
+    + maxScore: number
+    + notes?: string
+    + attachments: string[]
+    + recordedBy: string
+    + recordType: RecordType
+    + tags: string[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + getPercentage(): number
+    + isImprovement(previous): boolean
+  }
+  
+  class CalendarEvent {
+    + id: string
+    + title: string
+    + description?: string
+    + startTime: Date
+    + endTime: Date
+    + type: EventType
+    + priority: Priority
+    + location?: string
+    + isCompleted: boolean
+    + creatorId: string
+    + creator: User
+    + assignments: EventAssignment[]
+    + reminders: EventReminder[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + getDuration(): number
+    + isUpcoming(): boolean
+    + isOverdue(): boolean
+  }
+  
+  class EventAssignment {
+    + id: string
+    + eventId: string
+    + event: CalendarEvent
+    + userId: string
+    + user: User
+    + status: EventStatus
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isPending(): boolean
+    + isAccepted(): boolean
+  }
+  
+  class EventReminder {
+    + id: string
+    + eventId: string
+    + event: CalendarEvent
+    + reminderTime: Date
+    + message?: string
+    + isActive: boolean
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + shouldTrigger(now): boolean
+  }
+  
+  class Notification {
+    + id: string
+    + type: NotificationType
+    + title: string
+    + content: string
+    + data?: JSON
+    + isRead: boolean
+    + userId: string
+    + user: User
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + markAsRead(): void
+    + isRecent(): boolean
+  }
+  
+  class AnalyticsView {
+    + id: string
+    + userId: string
+    + user: User
+    + viewType: AnalyticsType
+    + filters?: JSON
+    + chartType: string
+    + isDefault: boolean
+    + position: number
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + getConfig(): object
+  }
+  
+  enum EventType {
+    PERSONAL
+    DEADLINE
+    MEETING
+    ASSIGNMENT
+    REMINDER
+    CLASS
+    EXAM
+  }
+  
+  enum Priority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+  }
+  
+  enum EventStatus {
+    PENDING
+    ACCEPTED
+    DECLINED
+    COMPLETED
+  }
+  
+  enum NotificationType {
+    SERVER_INVITATION
+    MENTEE_REQUEST
+    EVENT_ASSIGNMENT
+    EVENT_REMINDER
+    PROGRESS_UPDATE
+    SYSTEM_ANNOUNCEMENT
+    REVIEW_REMINDER
+  }
+  
+  enum RecordType {
+    MANUAL
+    AUTOMATIC
+    PEER_REVIEW
+    SELF_ASSESSMENT
+  }
+  
+  enum AnalyticsType {
+    PROGRESS_OVERVIEW
+    CATEGORY_BREAKDOWN
+    TIME_SERIES
+    COMPARISON
+    MENTEE_STATISTICS
+    MENTOR_STATISTICS
+    SYSTEM_OVERVIEW
+  }
+}
+
+' ==================== RELATIONSHIPS ====================
+DashboardController --> DashboardService
+DashboardController --> AnalyticsService
+ProgressController --> ProgressService
+EventController --> EventService
+
+DashboardService --> ProgressRepository
+ProgressService --> ProgressRepository
+EventService --> EventRepository
+EventService --> AssignmentRepository
+EventService --> ReminderRepository
+AnalyticsService --> AnalyticsRepository
+NotificationService --> NotificationRepository
+
+ProgressRepository --> ProgressRecord
+EventRepository --> CalendarEvent
+AssignmentRepository --> EventAssignment
+ReminderRepository --> EventReminder
+NotificationRepository --> Notification
+AnalyticsRepository --> AnalyticsView
+
+CalendarEvent "1" *-- "many" EventAssignment
+CalendarEvent "1" *-- "many" EventReminder
+
+ProgressRecord --> RecordType
+CalendarEvent --> EventType
+CalendarEvent --> Priority
+EventAssignment --> EventStatus
+Notification --> NotificationType
+AnalyticsView --> AnalyticsType
+
+@enduml

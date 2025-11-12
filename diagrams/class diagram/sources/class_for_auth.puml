@@ -1,0 +1,143 @@
+@startuml
+title Class Diagram - Authentication Module
+
+' ==================== CONTROLLERS ====================
+package "Controllers" {
+  class AuthController {
+    - authService: AuthService
+    - userService: UserService
+    - tokenService: TokenService
+    --
+    + POST signIn(profile, account): Response
+    + POST signOut(): Response
+    + POST assign(role): Response
+    + GET callback(code): Response
+  }
+}
+
+' ==================== DTOs ====================
+package "DTOs" {
+  class SignInDTO {
+    + email: string
+    + name: string
+    + picture: string
+    + role: UserRole
+    --
+    + validate(): boolean
+  }
+  
+  class SignOutDTO {
+    + sessionId: string
+    --
+    + validate(): boolean
+  }
+  
+  class TokenDTO {
+    + accessToken: string
+    + refreshToken?: string
+    + expiresIn: number
+    --
+    + isExpired(): boolean
+  }
+  
+  class UserResponseDTO {
+    + id: string
+    + email: string
+    + name: string
+    + role: string
+    + image?: string
+    --
+    + toJSON(): object
+  }
+}
+
+' ==================== SERVICES ====================
+package "Services" {
+  class AuthService {
+    - userService: UserService
+    - tokenService: TokenService
+    --
+    + handleSignIn(profile, account): Promise<TokenDTO>
+    + handleSignOut(sessionId): Promise<void>
+    + refreshSession(email): Promise<TokenDTO>
+    + validateSession(token): Promise<boolean>
+  }
+  
+  class UserService {
+    - userRepository: UserRepository
+    --
+    + findUser(email, role): Promise<User>
+    + createUser(data): Promise<User>
+    + updateUser(id, data): Promise<User>
+    + getUserByEmail(email): Promise<User>
+  }
+  
+  class TokenService {
+    - JWT_SECRET: string
+    --
+    + createToken(payload): string
+    + verifyToken(token): JWTPayload
+    + decodeToken(token): JWTPayload
+    + invalidateToken(token): void
+  }
+}
+
+' ==================== REPOSITORIES ====================
+package "Repositories" {
+  class UserRepository {
+    - prisma: PrismaClient
+    --
+    + findByEmail(email): Promise<User>
+    + findByEmailAndRole(email, role): Promise<User>
+    + create(data): Promise<User>
+    + update(id, data): Promise<User>
+    + delete(id): Promise<void>
+  }
+}
+
+' ==================== ENTITIES ====================
+package "Entities" {
+  class User {
+    + id: string
+    + email: string
+    + name?: string
+    + image?: string
+    + role: UserRole
+    + emailVerified?: Date
+    + department?: string
+    + major?: string
+    + year?: number
+    + bio?: string
+    + achievements: string[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isVerified(): boolean
+    + hasRole(role): boolean
+  }
+  
+  enum UserRole {
+    ADMIN
+    MENTOR
+    MENTEE
+  }
+}
+
+' ==================== RELATIONSHIPS ====================
+AuthController --> AuthService
+AuthController --> SignInDTO
+AuthController --> UserResponseDTO
+
+AuthService --> UserService
+AuthService --> TokenService
+AuthService --> TokenDTO
+
+UserService --> UserRepository
+UserService --> User
+
+UserRepository --> User
+
+SignInDTO --> UserRole
+User --> UserRole
+
+@enduml

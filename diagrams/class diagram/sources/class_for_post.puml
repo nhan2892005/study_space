@@ -1,0 +1,255 @@
+@startuml
+title Class Diagram - Mentor Management Module
+
+' ==================== CONTROLLERS ====================
+package "Controllers" {
+  class MentorController {
+    - mentorService: MentorService
+    - connectionService: ConnectionService
+    - reviewService: ReviewService
+    --
+    + GET getMentor(id): Response
+    + POST sendRequest(mentorId): Response
+    + GET getTopMentors(): Response
+    + POST addReview(mentorId, data): Response
+  }
+  
+  class ConnectionController {
+    - connectionService: ConnectionService
+    - notificationService: NotificationService
+    --
+    + GET getRequests(): Response
+    + POST respondRequest(requestId, action): Response
+    + GET getMyConnections(): Response
+  }
+  
+  class FeedbackController {
+    - feedbackService: FeedbackService
+    --
+    + POST addFeedback(menteeId, data): Response
+    + GET getFeedback(menteeId): Response
+  }
+}
+
+' ==================== DTOs ====================
+package "DTOs" {
+  class MentorRequestDTO {
+    + menteeId: string
+    + mentorId: string
+    --
+    + validate(): boolean
+  }
+  
+  class RespondRequestDTO {
+    + requestId: string
+    + action: ConnectionStatus
+    + reason?: string
+    --
+    + validate(): boolean
+  }
+  
+  class ReviewDTO {
+    + mentorId: string
+    + reviewerId: string
+    + rating: number
+    + comment?: string
+    --
+    + validate(): boolean
+  }
+  
+  class FeedbackDTO {
+    + menteeId: string
+    + mentorId: string
+    + score?: number
+    + comment?: string
+    --
+    + validate(): boolean
+  }
+  
+  class MentorResponseDTO {
+    + id: string
+    + name: string
+    + image?: string
+    + department?: string
+    + rating: number
+    + totalReviews: number
+    + expertise: string[]
+    + maxMentees: number
+    + currentMentees: number
+    + availableDays: string[]
+    --
+    + toJSON(): object
+  }
+}
+
+' ==================== SERVICES ====================
+package "Services" {
+  class MentorService {
+    - mentorRepository: MentorRepository
+    - userRepository: UserRepository
+    --
+    + getMentor(id): Promise<Mentor>
+    + getTopMentors(limit): Promise<Mentor[]>
+    + getAllMentors(): Promise<Mentor[]>
+    + updateProfile(id, data): Promise<MentorProfile>
+    + checkCapacity(mentorId): Promise<boolean>
+  }
+  
+  class ConnectionService {
+    - connectionRepository: ConnectionRepository
+    - notificationService: NotificationService
+    --
+    + createRequest(data): Promise<Connection>
+    + respondRequest(id, action, reason): Promise<Connection>
+    + getRequests(mentorId): Promise<Connection[]>
+    + getConnections(userId): Promise<Connection[]>
+    + checkExisting(menteeId, mentorId): Promise<Connection>
+  }
+  
+  class ReviewService {
+    - reviewRepository: ReviewRepository
+    - mentorRepository: MentorRepository
+    --
+    + addReview(data): Promise<Review>
+    + getReviews(mentorId): Promise<Review[]>
+    + updateMentorRating(mentorId): Promise<void>
+  }
+  
+  class FeedbackService {
+    - feedbackRepository: FeedbackRepository
+    --
+    + addFeedback(data): Promise<Feedback>
+    + getFeedback(menteeId): Promise<Feedback[]>
+    + getRecentFeedback(menteeId, limit): Promise<Feedback[]>
+  }
+}
+
+' ==================== REPOSITORIES ====================
+package "Repositories" {
+  class MentorRepository {
+    - prisma: PrismaClient
+    --
+    + findById(id): Promise<MentorProfile>
+    + findMany(filter): Promise<MentorProfile[]>
+    + update(id, data): Promise<MentorProfile>
+    + updateRating(id, rating, total): Promise<void>
+  }
+  
+  class ConnectionRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<MenteeConnection>
+    + findById(id): Promise<MenteeConnection>
+    + findByMentorAndMentee(mentorId, menteeId): Promise<MenteeConnection>
+    + update(id, data): Promise<MenteeConnection>
+    + findByMentor(mentorId, status): Promise<MenteeConnection[]>
+    + count(mentorId, status): Promise<number>
+  }
+  
+  class ReviewRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<Review>
+    + findByMentor(mentorId): Promise<Review[]>
+    + aggregate(mentorId): Promise<AggregateResult>
+  }
+  
+  class FeedbackRepository {
+    - prisma: PrismaClient
+    --
+    + create(data): Promise<MentorFeedback>
+    + findByMentee(menteeId): Promise<MentorFeedback[]>
+    + findRecent(menteeId, limit): Promise<MentorFeedback[]>
+  }
+}
+
+' ==================== ENTITIES ====================
+package "Entities" {
+  class MentorProfile {
+    + id: string
+    + userId: string
+    + user: User
+    + rating: number
+    + totalReviews: number
+    + expertise: string[]
+    + maxMentees: number
+    + availableDays: string[]
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + hasCapacity(): boolean
+    + getAverageRating(): number
+  }
+  
+  class MenteeConnection {
+    + id: string
+    + menteeId: string
+    + mentee: User
+    + mentorId: string
+    + mentor: User
+    + status: ConnectionStatus
+    + createdAt: Date
+    + updatedAt: Date
+    --
+    + isPending(): boolean
+    + isAccepted(): boolean
+    + isRejected(): boolean
+  }
+  
+  class Review {
+    + id: string
+    + reviewerId: string
+    + reviewer: User
+    + mentorId: string
+    + mentor: User
+    + rating: number
+    + comment?: string
+    + createdAt: Date
+    --
+    + isPositive(): boolean
+  }
+  
+  class MentorFeedback {
+    + id: string
+    + mentorId: string
+    + mentor: User
+    + menteeId: string
+    + mentee: User
+    + score?: number
+    + comment?: string
+    + createdAt: Date
+    --
+    + hasScore(): boolean
+  }
+  
+  enum ConnectionStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+  }
+}
+
+' ==================== RELATIONSHIPS ====================
+MentorController --> MentorService
+MentorController --> ReviewService
+MentorController --> MentorResponseDTO
+
+ConnectionController --> ConnectionService
+ConnectionController --> RespondRequestDTO
+
+FeedbackController --> FeedbackService
+FeedbackController --> FeedbackDTO
+
+MentorService --> MentorRepository
+ConnectionService --> ConnectionRepository
+ReviewService --> ReviewRepository
+FeedbackService --> FeedbackRepository
+
+MentorRepository --> MentorProfile
+ConnectionRepository --> MenteeConnection
+ReviewRepository --> Review
+FeedbackRepository --> MentorFeedback
+
+MenteeConnection --> ConnectionStatus
+
+@enduml
