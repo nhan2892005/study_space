@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
       totalMentors,
       totalMentees,
       activeConnections,
-      mentorStats,
-      activityData
+      mentorStats
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { role: 'MENTOR' } }),
@@ -36,51 +35,60 @@ export async function GET(request: NextRequest) {
           },
           receivedReviews: true
         }
-      }),
-
-      // Activity data for the last 30 days
-      prisma.$queryRaw`
-        WITH date_series AS (
-          SELECT generate_series(
-            CURRENT_DATE - INTERVAL '29 days',
-            CURRENT_DATE,
-            '1 day'::interval
-          )::date AS date
-        )
-        SELECT 
-          ds.date,
-          COALESCE(users.count, 0) as "newUsers",
-          COALESCE(events.count, 0) as sessions,
-          COALESCE(messages.count, 0) as messages,
-          COALESCE(reviews.count, 0) as reviews
-        FROM date_series ds
-        LEFT JOIN (
-          SELECT DATE(u."createdAt") as date, COUNT(*) as count
-          FROM "User" u
-          WHERE u."createdAt" >= CURRENT_DATE - INTERVAL '29 days'
-          GROUP BY DATE(u."createdAt")
-        ) users ON ds.date = users.date
-        LEFT JOIN (
-          SELECT DATE(e."createdAt") as date, COUNT(*) as count
-          FROM "CalendarEvent" e
-          WHERE e."createdAt" >= CURRENT_DATE - INTERVAL '29 days'
-          GROUP BY DATE(e."createdAt")
-        ) events ON ds.date = events.date
-        LEFT JOIN (
-          SELECT DATE(m."createdAt") as date, COUNT(*) as count
-          FROM "Message" m
-          WHERE m."createdAt" >= CURRENT_DATE - INTERVAL '29 days'
-          GROUP BY DATE(m."createdAt")
-        ) messages ON ds.date = messages.date
-        LEFT JOIN (
-          SELECT DATE(r."createdAt") as date, COUNT(*) as count
-          FROM "Review" r
-          WHERE r."createdAt" >= CURRENT_DATE - INTERVAL '29 days'
-          GROUP BY DATE(r."createdAt")
-        ) reviews ON ds.date = reviews.date
-        ORDER BY ds.date
-      `
+      })
     ]);
+
+    // Generate activity data for last 30 days using Prisma aggregations
+    const activityData = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+
+      const [newUsers, sessions, messages, reviews] = await Promise.all([
+        prisma.user.count({
+          where: {
+            createdAt: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
+          }
+        }),
+        prisma.calendarEvent.count({
+          where: {
+            createdAt: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
+          }
+        }),
+        prisma.message.count({
+          where: {
+            createdAt: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
+          }
+        }),
+        prisma.review.count({
+          where: {
+            createdAt: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
+          }
+        })
+      ]);
+
+      activityData.push({
+        date: startOfDay.toISOString().split('T')[0],
+        newUsers,
+        sessions,
+        messages,
+        reviews
+      });
+    }
 
     // Calculate average rating
     const allReviews = await prisma.review.findMany();
@@ -91,12 +99,14 @@ export async function GET(request: NextRequest) {
     // Calculate monthly growth (simplified)
     const currentMonth = new Date().getMonth();
     const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const currentYear = new Date().getFullYear();
+    const lastYear = lastMonth === 11 ? currentYear - 1 : currentYear;
     
     const currentMonthUsers = await prisma.user.count({
       where: {
         createdAt: {
-          gte: new Date(new Date().getFullYear(), currentMonth, 1),
-          lt: new Date(new Date().getFullYear(), currentMonth + 1, 1)
+          gte: new Date(currentYear, currentMonth, 1),
+          lt: new Date(currentYear, currentMonth + 1, 1)
         }
       }
     });
@@ -104,8 +114,8 @@ export async function GET(request: NextRequest) {
     const lastMonthUsers = await prisma.user.count({
       where: {
         createdAt: {
-          gte: new Date(new Date().getFullYear(), lastMonth, 1),
-          lt: new Date(new Date().getFullYear(), lastMonth + 1, 1)
+          gte: new Date(lastYear, lastMonth, 1),
+          lt: new Date(lastYear, lastMonth + 1, 1)
         }
       }
     });

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Users, TrendingUp, Clock, MessageSquare, Calendar, Star, Bell, Plus, Send } from 'lucide-react';
+import Image from 'next/image';
+import { Users, TrendingUp, Clock, MessageSquare, Calendar, Star, Bell, Plus, Send, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import toast from 'react-hot-toast';
 
 interface MenteeStats {
   id: string;
@@ -28,14 +30,38 @@ interface NotificationData {
   scheduledTime?: string;
 }
 
+interface NewEventModal {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  priority: string;
+  location: string;
+}
+
 const MentorDashboard = () => {
   const [menteeStats, setMenteeStats] = useState<MenteeStats[]>([]);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [recentFeedback, setRecentFeedback] = useState<any[]>([]);
+  const [feedbackStats, setFeedbackStats] = useState<any>(null);
   const [notificationData, setNotificationData] = useState<NotificationData>({
     type: 'event',
     title: '',
     message: '',
     recipients: 'all',
+  });
+  const [newEvent, setNewEvent] = useState<NewEventModal>({
+    title: '',
+    description: '',
+    startTime: '',
+    endTime: '',
+    type: 'CLASS',
+    priority: 'MEDIUM',
+    location: ''
   });
   const [loading, setLoading] = useState(true);
 
@@ -45,9 +71,13 @@ const MentorDashboard = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/dashboard/mentor');
-        if (!res.ok) throw new Error(`Failed to fetch mentor dashboard: ${res.status}`);
-        const data = await res.json();
+        const [dashboardRes, feedbackRes] = await Promise.all([
+          fetch('/api/dashboard/mentor'),
+          fetch('/api/dashboard/mentor/recent-feedback')
+        ]);
+        
+        if (!dashboardRes.ok) throw new Error(`Failed to fetch mentor dashboard: ${dashboardRes.status}`);
+        const data = await dashboardRes.json();
         if (!mounted) return;
 
         // Map menteeStats — API should return menteeStats array; fallback to empty
@@ -68,6 +98,13 @@ const MentorDashboard = () => {
         }));
 
         setMenteeStats(mentees);
+
+        // Load recent feedback if available
+        if (feedbackRes.ok) {
+          const feedbackData = await feedbackRes.json();
+          setRecentFeedback(feedbackData.recentFeedback);
+          setFeedbackStats(feedbackData.stats);
+        }
 
         // Optionally map analytics arrays if provided
         if (data.monthlyProgressData) {
@@ -112,11 +149,31 @@ const MentorDashboard = () => {
   ];
 
   const handleSendNotification = async () => {
+    if (!notificationData.title || !notificationData.message) {
+      toast.error('Vui lòng điền đầy đủ tiêu đề và nội dung thông báo');
+      return;
+    }
+
     try {
-      // API call to send notification
-      console.log('Sending notification:', notificationData);
-      
-      // Reset form and close modal
+      setSendingNotification(true);
+      const res = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: notificationData.type,
+          title: notificationData.title,
+          content: notificationData.message,
+          recipients: notificationData.recipients,
+          scheduledTime: notificationData.scheduledTime
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to send notification');
+      }
+
+      toast.success('Thông báo đã được gửi thành công!');
       setNotificationData({
         type: 'event',
         title: '',
@@ -124,12 +181,59 @@ const MentorDashboard = () => {
         recipients: 'all',
       });
       setShowNotificationModal(false);
-      
-      // Show success message
-      alert('Thông báo đã được gửi thành công!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending notification:', error);
-      alert('Có lỗi xảy ra khi gửi thông báo!');
+      toast.error(error.message || 'Lỗi khi gửi thông báo');
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime) {
+      toast.error('Vui lòng điền đầy đủ tiêu đề, thời gian bắt đầu và kết thúc');
+      return;
+    }
+
+    try {
+      setCreatingEvent(true);
+      const res = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newEvent.title,
+          description: newEvent.description,
+          startTime: new Date(newEvent.startTime).toISOString(),
+          endTime: new Date(newEvent.endTime).toISOString(),
+          type: newEvent.type,
+          priority: newEvent.priority,
+          location: newEvent.location
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create event');
+      }
+
+      toast.success('Sự kiện đã được tạo thành công!');
+      setNewEvent({
+        title: '',
+        description: '',
+        startTime: '',
+        endTime: '',
+        type: 'CLASS',
+        priority: 'MEDIUM',
+        location: ''
+      });
+      setShowEventModal(false);
+    } catch (error: any) {
+      console.error('Error creating event:', error);
+      toast.error(error.message || 'Lỗi khi tạo sự kiện');
+    } finally {
+      setCreatingEvent(false);
     }
   };
 
@@ -160,12 +264,15 @@ const MentorDashboard = () => {
           <div className="flex space-x-3">
             <button 
               onClick={() => setShowNotificationModal(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
               <Bell className="h-4 w-4" />
               Gửi thông báo
             </button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <button 
+              onClick={() => setShowEventModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
               <Plus className="h-4 w-4" />
               Tạo sự kiện
             </button>
@@ -295,6 +402,31 @@ const MentorDashboard = () => {
                 </button>
               </div>
             </div>
+
+            {/* Feedback Statistics */}
+            {feedbackStats && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thống kê đánh giá</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{feedbackStats.averageScore}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Điểm trung bình</div>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">{feedbackStats.totalFeedback}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Tổng lượt đánh giá</div>
+                  </div>
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{feedbackStats.last30Days}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">30 ngày gần đây</div>
+                  </div>
+                  <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{feedbackStats.highest}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Điểm cao nhất</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Analytics */}
@@ -362,6 +494,54 @@ const MentorDashboard = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              {/* Recent Feedback */}
+              {recentFeedback.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Đánh giá gần đây</h2>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {recentFeedback.slice(0, 8).map((feedback) => (
+                      <div key={feedback.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {feedback.mentee.image ? (
+                                <Image
+                                  src={feedback.mentee.image}
+                                  alt={feedback.mentee.name}
+                                  width={32}
+                                  height={32}
+                                  className="rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                  {feedback.mentee.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{feedback.mentee.name}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">{new Date(feedback.createdAt).toLocaleDateString('vi-VN')}</p>
+                              </div>
+                            </div>
+                          </div>
+                          {feedback.score !== null && (
+                            <div className={`flex-shrink-0 text-sm font-bold px-2 py-1 rounded whitespace-nowrap ${
+                              feedback.score >= 8 ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
+                              feedback.score >= 6 ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300' :
+                              'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+                            }`}>
+                              {feedback.score}/10
+                            </div>
+                          )}
+                        </div>
+                        {feedback.comment && (
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 line-clamp-2">{feedback.comment}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Performance Matrix */}
@@ -449,19 +629,28 @@ const MentorDashboard = () => {
 
         {/* Notification Modal */}
         {showNotificationModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Gửi thông báo</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-screen overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gửi thông báo</h3>
+                <button
+                  onClick={() => setShowNotificationModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
               
               <div className="space-y-4">
+                {/* Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Loại thông báo
                   </label>
                   <select
                     value={notificationData.type}
-                    onChange={(e) => setNotificationData(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => setNotificationData({...notificationData, type: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="event">Sự kiện</option>
                     <option value="announcement">Thông báo chung</option>
@@ -469,79 +658,226 @@ const MentorDashboard = () => {
                   </select>
                 </div>
 
+                {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Tiêu đề
+                    Tiêu đề <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={notificationData.title}
-                    onChange={(e) => setNotificationData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => setNotificationData({...notificationData, title: e.target.value})}
                     placeholder="Nhập tiêu đề thông báo..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
 
+                {/* Message */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nội dung
+                    Nội dung <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={notificationData.message}
-                    onChange={(e) => setNotificationData(prev => ({ ...prev, message: e.target.value }))}
-                    rows={4}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => setNotificationData({...notificationData, message: e.target.value})}
                     placeholder="Nhập nội dung thông báo..."
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                   />
                 </div>
 
+                {/* Recipients */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Người nhận
+                    Gửi đến
                   </label>
                   <select
-                    value={notificationData.recipients}
-                    onChange={(e) => setNotificationData(prev => ({ ...prev, recipients: e.target.value as any }))}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    value={notificationData.recipients as any}
+                    onChange={(e) => setNotificationData({...notificationData, recipients: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="all">Tất cả mentee</option>
-                    {menteeStats.map(mentee => (
-                      <option key={mentee.id} value={mentee.id}>{mentee.name}</option>
-                    ))}
+                    <option value="top">Top 5 mentee</option>
                   </select>
                 </div>
 
-                {notificationData.type === 'event' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Thời gian
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={notificationData.scheduledTime || ''}
-                      onChange={(e) => setNotificationData(prev => ({ ...prev, scheduledTime: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                )}
+                {/* Scheduled Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Thời gian gửi (tùy chọn)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={notificationData.scheduledTime || ''}
+                    onChange={(e) => setNotificationData({...notificationData, scheduledTime: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Để trống để gửi ngay</p>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowNotificationModal(false)}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleSendNotification}
-                  disabled={!notificationData.title || !notificationData.message}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2"
+                  disabled={sendingNotification}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Send className="h-4 w-4" />
-                  Gửi thông báo
+                  {sendingNotification ? 'Đang gửi...' : 'Gửi'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Event Modal */}
+        {showEventModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-screen overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tạo sự kiện</h3>
+                <button
+                  onClick={() => setShowEventModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateEvent} className="space-y-4">
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tên sự kiện <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                    placeholder="Nhập tên sự kiện..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Mô tả
+                  </label>
+                  <textarea
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                    placeholder="Nhập mô tả sự kiện..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  />
+                </div>
+
+                {/* Start Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Thời gian bắt đầu <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={newEvent.startTime}
+                    onChange={(e) => setNewEvent({...newEvent, startTime: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                {/* End Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Thời gian kết thúc <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={newEvent.endTime}
+                    onChange={(e) => setNewEvent({...newEvent, endTime: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
+
+                {/* Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Loại sự kiện <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newEvent.type}
+                    onChange={(e) => setNewEvent({...newEvent, type: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="PERSONAL">Cá nhân</option>
+                    <option value="DEADLINE">Hạn chót</option>
+                    <option value="MEETING">Cuộc họp</option>
+                    <option value="ASSIGNMENT">Bài tập</option>
+                    <option value="CLASS">Lớp học</option>
+                    <option value="EXAM">Kiểm tra</option>
+                  </select>
+                </div>
+
+                {/* Priority */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Độ ưu tiên <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newEvent.priority}
+                    onChange={(e) => setNewEvent({...newEvent, priority: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="LOW">Thấp</option>
+                    <option value="MEDIUM">Trung bình</option>
+                    <option value="HIGH">Cao</option>
+                    <option value="URGENT">Khẩn cấp</option>
+                  </select>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Địa điểm
+                  </label>
+                  <input
+                    type="text"
+                    value={newEvent.location}
+                    onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
+                    placeholder="Nhập địa điểm..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventModal(false)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingEvent}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {creatingEvent ? 'Đang tạo...' : 'Tạo sự kiện'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

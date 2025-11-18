@@ -14,10 +14,14 @@ export async function GET(request: NextRequest) {
     // Get mentee's progress records
     const progressRecords = await prisma.progressRecord.findMany({
       where: { menteeId: session.user.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 100
     });
 
-    // Get upcoming events
+    // Get upcoming events (next 30 days)
+    const thirtyDaysLater = new Date();
+    thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+    
     const events = await prisma.calendarEvent.findMany({
       where: {
         OR: [
@@ -29,24 +33,30 @@ export async function GET(request: NextRequest) {
           }
         ],
         startTime: {
-          gte: new Date()
+          gte: new Date(),
+          lte: thirtyDaysLater
         }
       },
       include: {
-        assignments: true
+        assignments: true,
+        creator: {
+          select: { id: true, name: true, image: true }
+        }
       },
       orderBy: { startTime: 'asc' },
-      take: 10
+      take: 20
     });
 
-    // Get recent feedback
+    // Get recent feedback from mentor
     const recentFeedback = await prisma.mentorFeedback.findMany({
       where: { menteeId: session.user.id },
       include: {
-        mentor: true
+        mentor: {
+          select: { id: true, name: true, image: true }
+        }
       },
       orderBy: { createdAt: 'desc' },
-      take: 5
+      take: 10
     });
 
     // Calculate progress data
@@ -85,11 +95,12 @@ export async function GET(request: NextRequest) {
 
     const formattedFeedback = recentFeedback.map((feedback:any) => ({
       id: feedback.id,
-      category: 'General', // You might want to add category to MentorFeedback model
+      category: 'General',
       score: feedback.score || 0,
       comment: feedback.comment || '',
       date: feedback.createdAt.toISOString().split('T')[0],
-      mentorName: feedback.mentor.name || 'Unknown'
+      mentorName: feedback.mentor?.name || 'Unknown',
+      mentorImage: feedback.mentor?.image
     }));
 
     return NextResponse.json({

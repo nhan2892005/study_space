@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, TrendingUp, Target, BookOpen, Star, Bell, Plus } from 'lucide-react';
+import { Calendar, Clock, TrendingUp, Target, BookOpen, Star, Bell, Plus, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import toast from 'react-hot-toast';
 
 interface ProgressData {
   category: string;
@@ -31,11 +32,32 @@ interface RecentFeedback {
   mentorName: string;
 }
 
+interface NewEvent {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  priority: string;
+  location: string;
+}
+
 const MenteeDashboard = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [progressData, setProgressData] = useState<ProgressData[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState<NewEvent>({
+    title: '',
+    description: '',
+    startTime: '',
+    endTime: '',
+    type: 'PERSONAL',
+    priority: 'MEDIUM',
+    location: ''
+  });
 
   // Mock data - replace with actual API calls
   useEffect(() => {
@@ -116,6 +138,65 @@ const MenteeDashboard = () => {
     return () => { mounted = false; };
   }, []);
 
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newEvent.title || !newEvent.startTime || !newEvent.endTime) {
+      toast.error('Vui lòng điền đầy đủ thông tin: Tiêu đề, thời gian bắt đầu, thời gian kết thúc');
+      return;
+    }
+
+    try {
+      setCreatingEvent(true);
+      const res = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newEvent.title,
+          description: newEvent.description,
+          startTime: new Date(newEvent.startTime).toISOString(),
+          endTime: new Date(newEvent.endTime).toISOString(),
+          type: newEvent.type,
+          priority: newEvent.priority,
+          location: newEvent.location
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create event');
+      }
+
+      const createdEvent = await res.json();
+      setEvents([...events, {
+        id: createdEvent.id,
+        title: createdEvent.title,
+        startTime: createdEvent.startTime,
+        endTime: createdEvent.endTime,
+        type: createdEvent.type,
+        priority: createdEvent.priority,
+        isCompleted: false
+      }].sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
+
+      toast.success('Sự kiện đã được tạo thành công!');
+      setShowAddEventModal(false);
+      setNewEvent({
+        title: '',
+        description: '',
+        startTime: '',
+        endTime: '',
+        type: 'PERSONAL',
+        priority: 'MEDIUM',
+        location: ''
+      });
+    } catch (err: any) {
+      console.error('Error creating event:', err);
+      toast.error(err.message || 'Lỗi khi tạo sự kiện');
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
   const timeSeriesData = [
     { month: 'T1', coding: 65, communication: 60, project: 55, problem: 62, teamwork: 70 },
     { month: 'T2', coding: 68, communication: 62, project: 58, problem: 65, teamwork: 72 },
@@ -170,7 +251,10 @@ const MenteeDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Theo dõi tiến trình học tập của bạn</p>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+          <button 
+            onClick={() => setShowAddEventModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
             <Plus className="h-4 w-4" />
             Thêm sự kiện
           </button>
@@ -411,6 +495,147 @@ const MenteeDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Event Modal */}
+      {showAddEventModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Thêm sự kiện mới</h2>
+              <button
+                onClick={() => setShowAddEventModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddEvent} className="space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tiêu đề <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                  placeholder="Nhập tiêu đề sự kiện"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mô tả
+                </label>
+                <textarea
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                  placeholder="Nhập mô tả (tùy chọn)"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Start Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Thời gian bắt đầu <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newEvent.startTime}
+                  onChange={(e) => setNewEvent({...newEvent, startTime: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* End Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Thời gian kết thúc <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newEvent.endTime}
+                  onChange={(e) => setNewEvent({...newEvent, endTime: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Loại sự kiện
+                </label>
+                <select
+                  value={newEvent.type}
+                  onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PERSONAL">Cá nhân</option>
+                  <option value="DEADLINE">Deadline</option>
+                  <option value="MEETING">Cuộc họp</option>
+                  <option value="ASSIGNMENT">Bài tập</option>
+                  <option value="CLASS">Lớp học</option>
+                  <option value="EXAM">Thi</option>
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mức độ ưu tiên
+                </label>
+                <select
+                  value={newEvent.priority}
+                  onChange={(e) => setNewEvent({...newEvent, priority: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="LOW">Thấp</option>
+                  <option value="MEDIUM">Trung bình</option>
+                  <option value="HIGH">Cao</option>
+                  <option value="URGENT">Khẩn cấp</option>
+                </select>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Địa điểm
+                </label>
+                <input
+                  type="text"
+                  value={newEvent.location}
+                  onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
+                  placeholder="Ví dụ: Phòng 305 hoặc Online Zoom"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddEventModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingEvent}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors disabled:cursor-not-allowed"
+                >
+                  {creatingEvent ? 'Đang tạo...' : 'Tạo sự kiện'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

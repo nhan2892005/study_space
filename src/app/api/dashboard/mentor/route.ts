@@ -19,13 +19,20 @@ export async function GET(request: NextRequest) {
       },
       include: {
         mentee: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            email: true,
+            updatedAt: true,
             progressRecords: {
-              orderBy: { createdAt: 'desc' }
+              orderBy: { createdAt: 'desc' },
+              take: 50
             }
           }
         }
-      }
+      },
+      orderBy: { mentee: { name: 'asc' } }
     });
 
     // Calculate mentee statistics
@@ -53,32 +60,40 @@ export async function GET(request: NextRequest) {
         Object.values(categories).reduce((sum, score) => sum + score, 0) / 5
       );
 
-      // Calculate improvement (compare with records from last month)
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      
-      const oldRecords = progressRecords.filter((r:any) => r.createdAt <= lastMonth);
-      const oldCategoryScores = oldRecords.reduce((acc:any, record:any) => {
-        if (!acc[record.category] || acc[record.category].createdAt < record.createdAt) {
-          acc[record.category] = record;
-        }
-        return acc;
-      }, {} as Record<string, any>);
-
-      const oldOverallScore = Math.round(
-        Object.values(oldCategoryScores).reduce((sum: number, record: any) => 
-          sum + (record?.score || 0), 0
-        ) / 5
+      // Calculate improvement: oldest vs newest score
+      const sortedByDate = [...progressRecords].sort((a:any, b:any) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
+      
+      let oldOverallScore = 0;
+      if (sortedByDate.length > 0) {
+        const oldestRecord = sortedByDate[0];
+        const oldCategoryScores = sortedByDate
+          .filter((r:any) => r.createdAt <= oldestRecord.createdAt)
+          .reduce((acc:any, record:any) => {
+            if (!acc[record.category]) {
+              acc[record.category] = record;
+            }
+            return acc;
+          }, {} as Record<string, any>);
+        
+        oldOverallScore = Object.keys(oldCategoryScores).length > 0 ? Math.round(
+          Object.values(oldCategoryScores).reduce((sum: number, record: any) => 
+            sum + (record?.score || 0), 0
+          ) / Object.keys(oldCategoryScores).length
+        ) : 0;
+      }
 
       return {
         id: mentee.id,
         name: mentee.name || 'Unknown',
-        avatar: mentee.image || '/api/placeholder/40/40',
+        avatar: mentee.image || `https://api.dicebear.com/9.x/avataaars/png?seed=${mentee.id}`,
+        email: mentee.email,
         overallScore,
         improvement: overallScore - oldOverallScore,
         lastActivity: mentee.updatedAt.toISOString(),
-        categories
+        categories,
+        progressRecordCount: progressRecords.length
       };
     });
 
