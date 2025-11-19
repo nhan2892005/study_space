@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       data: {
         name,
         description,
-        image,
+        image: image || null,
         owner: { connect: { id: user.id } },
         members: {
           create: {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         channels: {
           createMany: {
             data: [
-              { name: 'welcome', type: 'TEXT', description: 'General discussion' },
+              { name: 'welcome', description: 'General discussion' },
             ],
           },
         },
@@ -53,16 +53,28 @@ export async function POST(request: Request) {
               select: {
                 id: true,
                 name: true,
-                image: true,
-                role: true,
+                // image: true, // Removed
+                userType: true, // Mapped
               },
             },
           },
         },
       },
     });
+    
+    const formattedServer = {
+      ...server,
+      members: server.members.map(member => ({
+        ...member,
+        user: {
+          ...member.user,
+          role: member.user.userType,
+          image: `https://api.dicebear.com/9.x/initials/svg?seed=${member.user.name}`
+        }
+      }))
+    };
 
-    return NextResponse.json(server);
+    return NextResponse.json(formattedServer);
   } catch (error) {
     console.error("Error creating server:", error);
     return NextResponse.json(
@@ -105,7 +117,6 @@ export async function GET() {
           select: {
             id: true,
             name: true,
-            image: true,
           },
         },
         members: {
@@ -114,8 +125,7 @@ export async function GET() {
               select: {
                 id: true,
                 name: true,
-                image: true,
-                role: true,
+                userType: true,
               },
             },
           },
@@ -132,7 +142,23 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(servers);
+    const formattedServers = servers.map(server => ({
+      ...server,
+      owner: {
+        ...server.owner,
+        image: `https://api.dicebear.com/9.x/initials/svg?seed=${server.owner.name}`
+      },
+      members: server.members.map(member => ({
+        ...member,
+        user: {
+          ...member.user,
+          role: member.user.userType,
+          image: `https://api.dicebear.com/9.x/initials/svg?seed=${member.user.name}`
+        }
+      }))
+    }));
+
+    return NextResponse.json(formattedServers);
   } catch (error) {
     console.error("Error fetching servers:", error);
     return NextResponse.json(

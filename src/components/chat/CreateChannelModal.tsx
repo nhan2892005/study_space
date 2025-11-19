@@ -5,8 +5,6 @@ import { Fragment, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSocket } from '@/contexts/SocketContext';
 
-type ChannelType = 'TEXT' | 'VOICE' | 'VIDEO' | 'STREAMING';
-
 interface CreateChannelModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,7 +14,6 @@ interface CreateChannelModalProps {
 
 export default function CreateChannelModal({ isOpen, onClose, serverId, onChannelCreated }: CreateChannelModalProps) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<ChannelType>('TEXT');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { socket } = useSocket();
@@ -36,7 +33,6 @@ export default function CreateChannelModal({ isOpen, onClose, serverId, onChanne
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          type,
           description: description.trim() || undefined,
         }),
       });
@@ -48,7 +44,6 @@ export default function CreateChannelModal({ isOpen, onClose, serverId, onChanne
 
       const channel = await response.json();
       
-      // Emit socket event to notify all server members about new channel
       if (socket) {
         socket.emit('channel-created', { 
           channelId: channel.id, 
@@ -58,14 +53,12 @@ export default function CreateChannelModal({ isOpen, onClose, serverId, onChanne
 
       toast.success('Channel created successfully!');
       
-      // Call callback if provided
       if (onChannelCreated) {
         onChannelCreated(channel);
       }
 
       setName('');
       setDescription('');
-      setType('TEXT');
       onClose();
     } catch (error) {
       console.error('Error creating channel:', error);
@@ -124,22 +117,7 @@ export default function CreateChannelModal({ isOpen, onClose, serverId, onChanne
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Channel Type
-                    </label>
-                    <select
-                      id="type"
-                      value={type}
-                      onChange={(e) => setType(e.target.value as ChannelType)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    >
-                      <option value="TEXT">Text Channel</option>
-                      <option value="VOICE">Voice Channel</option>
-                      <option value="VIDEO">Video Channel</option>
-                      <option value="STREAMING">Streaming Channel</option>
-                    </select>
-                  </div>
+                  {/* Removed Type Selector */}
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

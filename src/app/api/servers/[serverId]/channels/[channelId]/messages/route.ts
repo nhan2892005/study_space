@@ -38,7 +38,7 @@ export async function GET(
       where: { channelId: params.channelId },
       include: {
         author: {
-          select: { name: true, image: true },
+          select: { name: true },
         },
         files: true,
       },
@@ -120,7 +120,7 @@ export async function POST(
       },
       include: {
         author: {
-          select: { name: true, image: true },
+          select: { name: true },
         },
         files: true,
       },

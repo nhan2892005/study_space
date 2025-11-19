@@ -1,11 +1,23 @@
 'use client';
 
 import type { ExtendedPost } from '@/types/post';
-import { ReactionType } from '@prisma/client';
+// REMOVE: import { ReactionType } from '@prisma/client';  <-- XÓA DÒNG NÀY
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
+
+// THÊM: Tự định nghĩa Enum/Object ReactionType ở đây
+const ReactionType = {
+  LIKE: 'LIKE',
+  HEART: 'HEART',
+  HAHA: 'HAHA',
+  SAD: 'SAD',
+  CONGRATS: 'CONGRATS',
+} as const;
+
+// Định nghĩa Type cho TS
+type ReactionType = typeof ReactionType[keyof typeof ReactionType];
 
 interface PostCardProps {
   post: ExtendedPost;

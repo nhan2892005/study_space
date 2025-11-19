@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { InvitationStatus } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -15,11 +14,12 @@ export async function GET() {
     const invitations = await prisma.serverInvitation.findMany({
       where: {
         invitedUser: { email: session.user.email },
-        status: InvitationStatus.PENDING,
+        status: "PENDING",
       },
       include: {
         server: true,
-        invitedBy: {
+        // SỬA Ở ĐÂY: Dùng 'inviter' thay vì 'invitedBy'
+        inviter: {
           select: {
             name: true,
           },
@@ -31,12 +31,13 @@ export async function GET() {
     });
 
     // Transform the data to match the Notification interface
-    const formattedInvitations = invitations.map((invitation:any) => ({
+    const formattedInvitations = invitations.map((invitation: any) => ({
       id: invitation.id,
       type: 'SERVER_INVITATION',
       serverId: invitation.serverId,
       serverName: invitation.server.name,
-      invitedByName: invitation.invitedBy.name,
+      // SỬA Ở ĐÂY: Lấy name từ 'inviter'
+      invitedByName: invitation.inviter.name, 
     }));
 
     return NextResponse.json({ invitations: formattedInvitations });

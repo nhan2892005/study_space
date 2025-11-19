@@ -10,11 +10,11 @@ export default async function MentorIndex() {
     return <div className="p-8">Vui lòng đăng nhập để xem mentors.</div>;
   }
 
-  const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true, role: true } });
+  const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true, userType: true } });
   if (!user) return <div className="p-8">Người dùng không tồn tại</div>;
 
   // Only mentees can request mentors; mentors should see their own wall elsewhere
-  if (user.role !== 'MENTEE') {
+  if (user.userType !== 'MENTEE') {
     return <div className="p-8">Trang này dành cho Mentees.</div>;
   }
 
@@ -35,7 +35,7 @@ export default async function MentorIndex() {
   }
 
   // Otherwise list all mentors
-  const mentorProfiles = await prisma.mentorProfile.findMany({ include: { user: { select: { id: true, name: true, image: true, department: true, achievements: true, email: true } } } });
+  const mentorProfiles = await prisma.mentorProfile.findMany({ include: { user: { select: { id: true, name: true, department: true, achievements: true, email: true } } } });
 
   const mentors = await Promise.all(mentorProfiles.map(async (mp:any) => {
     const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });

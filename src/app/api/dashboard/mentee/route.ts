@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       include: {
         assignments: true,
         creator: {
-          select: { id: true, name: true, image: true }
+          select: { id: true, name: true }
         }
       },
       orderBy: { startTime: 'asc' },
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       where: { menteeId: session.user.id },
       include: {
         mentor: {
-          select: { id: true, name: true, image: true }
+          select: { id: true, name: true }
         }
       },
       orderBy: { createdAt: 'desc' },

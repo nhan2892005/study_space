@@ -48,6 +48,10 @@ const MentorDashboard = () => {
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [recentFeedback, setRecentFeedback] = useState<any[]>([]);
   const [feedbackStats, setFeedbackStats] = useState<any>(null);
+  const [monthlyProgressData, setMonthlyProgressData] = useState<any[]>([]);
+  const [weeklyActivityData, setWeeklyActivityData] = useState<any[]>([]);
+  const [overviewStats, setOverviewStats] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any>(null);
   const [notificationData, setNotificationData] = useState<NotificationData>({
     type: 'event',
     title: '',
@@ -71,9 +75,12 @@ const MentorDashboard = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const [dashboardRes, feedbackRes] = await Promise.all([
+        const [dashboardRes, feedbackRes, analyticsRes, overviewRes, activityRes] = await Promise.all([
           fetch('/api/dashboard/mentor'),
-          fetch('/api/dashboard/mentor/recent-feedback')
+          fetch('/api/dashboard/mentor/recent-feedback'),
+          fetch('/api/dashboard/mentor/analytics'),
+          fetch('/api/dashboard/mentor/overview'),
+          fetch('/api/dashboard/mentor/activity')
         ]);
         
         if (!dashboardRes.ok) throw new Error(`Failed to fetch mentor dashboard: ${dashboardRes.status}`);
@@ -106,6 +113,25 @@ const MentorDashboard = () => {
           setFeedbackStats(feedbackData.stats);
         }
 
+        // Load analytics data if available
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json();
+          setMonthlyProgressData(analyticsData.monthlyProgressData);
+          setWeeklyActivityData(analyticsData.weeklyActivityData);
+        }
+
+        // Load overview stats
+        if (overviewRes.ok) {
+          const overviewData = await overviewRes.json();
+          setOverviewStats(overviewData);
+        }
+
+        // Load recent activity
+        if (activityRes.ok) {
+          const activityData = await activityRes.json();
+          setRecentActivity(activityData);
+        }
+
         // Optionally map analytics arrays if provided
         if (data.monthlyProgressData) {
           // replace local const via state? currently monthlyProgressData is const — keep local fallback
@@ -121,31 +147,12 @@ const MentorDashboard = () => {
     return () => { mounted = false; };
   }, []);
 
-  const monthlyProgressData = [
-    { month: 'T1', average: 72, mentee1: 68, mentee2: 75, mentee3: 65, mentee4: 80 },
-    { month: 'T2', average: 74, mentee1: 70, mentee2: 77, mentee3: 66, mentee4: 82 },
-    { month: 'T3', average: 76, mentee1: 72, mentee2: 78, mentee3: 67, mentee4: 84 },
-    { month: 'T4', average: 78, mentee1: 74, mentee2: 80, mentee3: 68, mentee4: 86 },
-    { month: 'T5', average: 79, mentee1: 76, mentee2: 81, mentee3: 66, mentee4: 87 },
-    { month: 'T6', average: 81, mentee1: 78, mentee2: 82, mentee3: 65, mentee4: 89 },
-  ];
-
   const categoryDistribution = [
     { name: 'Coding Skills', value: 28, color: '#3B82F6' },
     { name: 'Communication', value: 22, color: '#10B981' },
     { name: 'Project Mgmt', value: 18, color: '#F59E0B' },
     { name: 'Problem Solving', value: 20, color: '#8B5CF6' },
     { name: 'Teamwork', value: 12, color: '#EF4444' },
-  ];
-
-  const weeklyActivityData = [
-    { day: 'T2', submissions: 8, meetings: 4, reviews: 6 },
-    { day: 'T3', submissions: 12, meetings: 3, reviews: 8 },
-    { day: 'T4', submissions: 10, meetings: 5, reviews: 7 },
-    { day: 'T5', submissions: 15, meetings: 2, reviews: 10 },
-    { day: 'T6', submissions: 9, meetings: 6, reviews: 5 },
-    { day: 'T7', submissions: 7, meetings: 1, reviews: 3 },
-    { day: 'CN', submissions: 5, meetings: 0, reviews: 2 },
   ];
 
   const handleSendNotification = async () => {
@@ -285,8 +292,8 @@ const MentorDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tổng số mentee</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{menteeStats.length}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">Còn {5 - menteeStats.length} slot</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.menteeCount || 0}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Đang hỗ trợ</p>
               </div>
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
                 <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -299,9 +306,9 @@ const MentorDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Điểm TB của lớp</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {Math.round(menteeStats.reduce((sum, m) => sum + m.overallScore, 0) / menteeStats.length)}
+                  {menteeStats.length > 0 ? Math.round(menteeStats.reduce((sum, m) => sum + m.overallScore, 0) / menteeStats.length) : 0}
                 </p>
-                <p className="text-xs text-green-600 dark:text-green-400">+3.2 từ tháng trước</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Từ {menteeStats.length} học sinh</p>
               </div>
               <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
                 <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -312,12 +319,12 @@ const MentorDashboard = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Hoạt động tuần này</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">42</p>
-                <p className="text-xs text-orange-600 dark:text-orange-400">15 bài nộp, 12 cuộc họp</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Đánh giá của tôi</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.averageRating || 0}</p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-400">⭐ Từ {overviewStats?.totalReviews || 0} reviews</p>
               </div>
-              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
-                <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-full">
+                <Star className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
             </div>
           </div>
@@ -325,12 +332,67 @@ const MentorDashboard = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Đánh giá của tôi</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">4.7</p>
-                <p className="text-xs text-yellow-600 dark:text-yellow-400">⭐ Từ 23 reviews</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Hoạt động tuần này</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.weeklyActivityCount || 0}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Đánh giá đã gửi</p>
               </div>
-              <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-full">
-                <Star className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
+                <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Bài đăng của tôi</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.postCount || 0}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Tất cả thời gian</p>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                <MessageSquare className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Học sinh đã chấm</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.ratedMenteeCount || 0}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Tổng {overviewStats?.totalFeedback || 0} đánh giá</p>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                <Star className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Thông báo (tháng này)</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.notificationsThisMonth || 0}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400">Đã gửi</p>
+              </div>
+              <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
+                <Bell className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Sự kiện (tháng này)</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{overviewStats?.eventsThisMonth || 0}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Đã tạo</p>
+              </div>
+              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
+                <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </div>
@@ -424,6 +486,77 @@ const MentorDashboard = () => {
                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{feedbackStats.highest}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">Điểm cao nhất</div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Feedback */}
+            {recentFeedback && recentFeedback.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Đánh giá gần đây</h2>
+                <div className="space-y-4">
+                  {recentFeedback.slice(0, 5).map((feedback: any) => (
+                    <div key={feedback.id} className="flex items-start space-x-3 p-3 border-l-4 border-blue-500 pl-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {feedback.mentee?.name || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                          {feedback.comment || 'Không có nhận xét'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-lg font-bold text-blue-600">{feedback.score || 0}</div>
+                        <div className="text-xs text-gray-500">/100</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Created Notifications */}
+            {recentActivity && recentActivity.notifications && recentActivity.notifications.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thông báo gần đây</h2>
+                <div className="space-y-3">
+                  {recentActivity.notifications.slice(0, 5).map((notif: any) => (
+                    <div key={notif.id} className={`p-3 rounded-lg border-l-4 ${notif.isRead ? 'bg-gray-50 dark:bg-gray-700 border-gray-400' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{notif.title}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{notif.content}</p>
+                      <p className="text-xs text-gray-500 mt-2">{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Created Events */}
+            {recentActivity && recentActivity.events && recentActivity.events.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Sự kiện đã tạo</h2>
+                <div className="space-y-3">
+                  {recentActivity.events.slice(0, 5).map((event: any) => (
+                    <div key={event.id} className={`p-3 rounded-lg border-l-4 ${event.isCompleted ? 'bg-green-50 dark:bg-green-900/20 border-green-500' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-500'}`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{event.title}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs px-2 py-1 bg-white dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                            {event.priority}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {event.assignmentCount} người được giao
+                          </span>
+                        </div>
+                        <span className={`text-xs font-medium ${event.isCompleted ? 'text-green-600' : 'text-orange-600'}`}>
+                          {event.isCompleted ? '✓ Hoàn thành' : '⏳ Sắp tới'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

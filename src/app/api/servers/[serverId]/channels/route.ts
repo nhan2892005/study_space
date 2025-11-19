@@ -14,18 +14,14 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, type, description } = await request.json();
+    const { name, description } = await request.json();
     const { serverId } = params;
-    console.log(params)
-
-    if (!name?.trim() || !type || !Object.values(ChannelType).includes(type)) {
+    if (!name?.trim()) {
       return NextResponse.json(
         { error: "Invalid channel data" },
         { status: 400 }
       );
     }
-
-    console.log(`server: ${serverId}, email: ${session.user.email}`)
 
     // Check if user has permission to create channel
     const member = await prisma.serverMember.findFirst({
@@ -46,7 +42,6 @@ export async function POST(
     const channel = await prisma.channel.create({
       data: {
         name,
-        type,
         description,
         server: { connect: { id: serverId } },
       },
@@ -107,7 +102,6 @@ export async function GET(
         },
       },
       orderBy: [
-        { type: 'asc' },
         { name: 'asc' },
       ],
     });

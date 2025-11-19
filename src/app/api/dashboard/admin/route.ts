@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
       mentorStats
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { role: 'MENTOR' } }),
-      prisma.user.count({ where: { role: 'MENTEE' } }),
+      prisma.user.count({ where: { userType: 'MENTOR' } }),
+      prisma.user.count({ where: { userType: 'MENTEE' } }),
       prisma.menteeConnection.count({ where: { status: 'ACCEPTED' } }),
       
       // Mentor statistics
       prisma.user.findMany({
-        where: { role: 'MENTOR' },
+        where: { userType: 'MENTOR' },
         include: {
           mentorProfile: true,
           mentorConnections: {

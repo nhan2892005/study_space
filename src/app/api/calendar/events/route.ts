@@ -12,13 +12,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, startTime, endTime, type, priority, location } = body;
+    const { title, description, startTime, endTime, priority } = body;
 
     if (!title || !startTime || !endTime) {
       return NextResponse.json({ 
         error: 'Title, startTime, and endTime are required' 
       }, { status: 400 });
     }
+
+    // Validate priority value
+    const validPriorities = ['LOW', 'MEDIUM', 'HIGH'];
+    const eventPriority = validPriorities.includes(priority) ? priority : 'MEDIUM';
 
     // Create the calendar event
     const event = await prisma.calendarEvent.create({
@@ -27,9 +31,7 @@ export async function POST(request: NextRequest) {
         description,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        type: type || 'PERSONAL',
-        priority: priority || 'MEDIUM',
-        location,
+        priority: eventPriority, // String value
         creatorId: session.user.id,
       }
     });
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
       data: {
         eventId: event.id,
         userId: session.user.id,
-        status: 'ACCEPTED'
+        status: 'ACCEPTED' // String value
       }
     });
 
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
       include: {
         assignments: true,
         creator: {
-          select: { id: true, name: true, image: true }
+          select: { id: true, name: true }
         }
       },
       orderBy: { startTime: 'asc' },

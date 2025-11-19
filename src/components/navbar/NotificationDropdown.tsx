@@ -26,18 +26,18 @@ export default function NotificationDropdown() {
         fetch('/api/invitations').catch(() => null),
         fetch('/api/mentor/requests').catch(() => null),
       ]);
+      if (invRes === null) throw new Error('can not fetch');
+      if (reqRes === null) throw new Error('can not fetch');
+      const invRes_json = await invRes.json();
+      const reqRes_json = await reqRes.json();
 
-      const invitations = invRes && invRes.ok ? (await invRes.json()).invitations : [];
-      const requests = reqRes && reqRes.ok ? (await reqRes.json()).requests.map((r: any) => ({
-        id: r.id,
-        type: 'MENTEE_REQUEST',
-        menteeId: r.mentee.id,
-        menteeName: r.mentee.name,
-      })) : [];
+      const invitations = invRes && invRes.ok ? (invRes_json).invitations : [];
+      const requests = reqRes && reqRes.ok ? (reqRes_json).requests : [];
 
       const merged = [
         ...invitations.map((i: any) => ({ id: i.id, type: 'SERVER_INVITATION', serverId: i.serverId, serverName: i.serverName, invitedByName: i.invitedByName })),
-        ...requests,
+        ...requests.map((r: any) => ({id: r.id,type: 'MENTEE_REQUEST', menteeId: r.mentee.id, menteeName: r.mentee.name,
+      })),
       ];
 
       setNotifications(merged as any);

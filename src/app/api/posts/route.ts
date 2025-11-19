@@ -32,16 +32,20 @@ export async function POST(request: Request) {
     const post = await prisma.post.create({
       data: {
         content,
-        images: imagesUrls, // empty array if not uploaded yet
+        images: {
+          create: imagesUrls.map((url: string) => ({
+            imageUrl: url, 
+          })),
+        }, // empty array if not uploaded yet
         authorId: user.id,
       },
       include: {
         author: {
           select: {
-            name: true,
-            image: true,
+            name: true
           },
         },
+        images: true,
       },
     });
 

@@ -7,7 +7,6 @@ import { useServer } from '@/contexts/ServerContext';
 import { useMessages } from '@/hooks/useMessages';
 import { useSocket } from '@/contexts/SocketContext';
 import InviteMemberModal from './InviteMemberModal';
-import StreamingArea from './StreamingArea';
 
 interface FileData {
   id: string;
@@ -21,7 +20,6 @@ interface Channel {
   id: string;
   name: string;
   description?: string;
-  type: 'TEXT' | 'VOICE' | 'VIDEO' | 'STREAMING';
 }
 
 interface ChatAreaProps {
@@ -53,8 +51,6 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
 
   const { socket } = useSocket();
 
-  console.log(socket)
-
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,7 +67,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
         setChannel(data);
       } catch (error) {
         console.error('Error fetching channel:', error);
-        toast.error('Failed to load channel');
+        toast.error(`Failed to load channel ${channelId}`);
       }
     };
 
@@ -100,7 +96,7 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     if ((!message.trim() && selectedFiles.length === 0) || !channelId) return;
 
     setUploading(true);
-    handleStopTyping(); // Stop typing indicator when sending
+    handleStopTyping();
     
     try {
       const success = await sendMessage(message, selectedFiles);
@@ -117,17 +113,15 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     }
   };
 
-  // Handle typing indicators
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
-    handleTyping(); // Trigger typing indicator
+    handleTyping();
   };
 
   const handleInputBlur = () => {
-    handleStopTyping(); // Stop typing when input loses focus
+    handleStopTyping();
   };
 
-  // Render file preview function
   const renderFilePreview = (file: FileData) => {
     switch (file.type) {
       case 'IMAGE':
@@ -232,7 +226,6 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // Render welcome screen if no channel is selected
   if (!channelId && activeServer) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-gray-700">
@@ -269,14 +262,6 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
     );
   }
 
-  if (channel && channel.type === 'STREAMING') {
-    return (
-      <div className="flex-1">
-        <StreamingArea serverId={serverId} channelId={channel.id} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-gray-700">
       {/* Channel Header */}
@@ -291,7 +276,6 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
               {channel.description}
             </span>
           )}
-          {/* Connection status indicator */}
           <div className="ml-3 flex items-center">
             <div 
               className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
@@ -377,7 +361,6 @@ export default function ChatArea({ serverId, channelId }: ChatAreaProps) {
               );
             })}
             
-            {/* Typing indicators */}
             {typingUsers.length > 0 && (
               <div className="flex items-center gap-2 text-sm text-gray-500 italic pl-2">
                 <div className="flex gap-1">

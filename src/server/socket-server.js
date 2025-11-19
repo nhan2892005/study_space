@@ -44,7 +44,7 @@ io.use(async (socket, next) => {
     const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET);
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
-      select: { id: true, email: true, name: true, image: true }
+      select: { id: true, email: true, name: true }
     });
 
     if (!user) {
@@ -509,7 +509,6 @@ io.on('connection', async (socket) => {
       const message = await prisma.message.create({
         data: {
           content: content || (files.length > 0 ? 'Shared files' : ''),
-          type: files.length > 0 ? 'FILE' : 'TEXT',
           authorId: socket.userId,
           channelId: channelId,
           files: {
@@ -522,7 +521,7 @@ io.on('connection', async (socket) => {
           }
         },
         include: {
-          author: { select: { name: true, image: true } },
+          author: { select: { name: true } },
           files: true
         }
       });
@@ -534,7 +533,7 @@ io.on('connection', async (socket) => {
         type: message.type,
         author: {
           name: message.author.name || 'Unknown User',
-          image: message.author.image || ''
+          image: message.author.image || `https://api.dicebear.com/9.x/icons/svg?seed=${message.author.name}`
         },
         files: message.files,
         timestamp: message.createdAt

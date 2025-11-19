@@ -3,26 +3,87 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-export async function GET(req: Request, { params }: { params: { mentorId: string } }) {
-  const { mentorId } = params;
+export async function GET(
+  req: Request, 
+  { params }: { params: { mentorId: string } }
+) {
+  try {
+    const { mentorId } = params;
 
-  const user = await prisma.user.findUnique({
-    where: { id: mentorId },
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      role: true,
-      mentorProfile: true,
+    const user = await prisma.user.findUnique({
+      where: { id: mentorId },
+      select: {
+        id: true,
+        name: true,
+        userType: true,
+        department: true,
+        major: true,
+        mentorProfile: {
+          include: {
+            chuyenMon: true,
+            lichTrong: {
+              where: {
+                ngay: {
+                  gte: new Date()
+                }
+              },
+              orderBy: {
+                ngay: 'asc'
+              }
+            }
+          }
+        },
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-  });
 
-  if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const posts = await prisma.post.findMany({ 
+      where: { authorId: mentorId }, 
+      orderBy: { createdAt: 'desc' },
+      include: {
+        images: true,
+        comments: {
+          include: {
+            author: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        reactions: true
+      }
+    });
 
-  const posts = await prisma.post.findMany({ where: { authorId: mentorId }, orderBy: { createdAt: 'desc' } });
-  const reviews = await prisma.review.findMany({ where: { mentorId }, orderBy: { createdAt: 'desc' }, include: { reviewer: { select: { id: true, name: true, image: true } } } });
+    const reviews = await prisma.review.findMany({ 
+      where: { mentorId }, 
+      orderBy: { createdAt: 'desc' }, 
+      include: { 
+        reviewer: { 
+          select: { id: true, name: true } 
+        } 
+      } 
+    });
 
-  return NextResponse.json({ user, posts, reviews });
+    // Add generated avatar
+    const formattedUser = {
+      ...user,
+      image: `https://api.dicebear.com/9.x/initials/svg?seed=${user.name}`
+    };
+
+    return NextResponse.json({ 
+      user: formattedUser, 
+      posts, 
+      reviews 
+    });
+  } catch (error) {
+    console.error('Error fetching mentor:', error);
+    return NextResponse.json(
+      { error: 'Error fetching mentor' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request, { params }: { params: { mentorId: string } }) {

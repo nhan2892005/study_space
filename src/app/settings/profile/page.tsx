@@ -22,13 +22,12 @@ export default async function ProfilePage() {
       id: true,
       name: true,
       email: true,
-      image: true,
-      role: true,
+      userType: true,
       department: true,
       major: true,
-      year: true,
-      bio: true,
-      achievements: true,
+      //year: true,
+      // bio: true,
+      //achievements: true,
     },
   });
 

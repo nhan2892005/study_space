@@ -70,7 +70,7 @@ export const USER_MENU_ITEMS: NavigationItem[] = [
   {
     label: 'Sign Out',
     href: '#',
-    icon: 'ArrowRightOnRectangle',
+    icon: 'UserCircle',
     roles: ['mentee', 'mentor', 'admin'],
   },
 ] as const;

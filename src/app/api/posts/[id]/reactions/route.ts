@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { Prisma, ReactionType } from "@prisma/client";
+import { Prisma } from "@prisma/client"; // Bỏ import ReactionType
+
+// 1. Tự định nghĩa danh sách các reaction hợp lệ
+const VALID_REACTIONS = ["LIKE", "LOVE", "HAHA", "WOW", "SAD", "ANGRY"];
 
 export async function POST(
   request: Request,
@@ -16,9 +19,10 @@ export async function POST(
     }
 
     const body = await request.json();
-    const type = body?.type as ReactionType;
+    const type = body?.type; // Kiểu dữ liệu bây giờ là string
 
-    if (!type || !Object.values(ReactionType).includes(type)) {
+    // 2. Sửa lại logic kiểm tra hợp lệ
+    if (!type || !VALID_REACTIONS.includes(type)) {
       return NextResponse.json({ error: "Invalid reaction type" }, { status: 400 });
     }
 
@@ -34,21 +38,20 @@ export async function POST(
       userId: user.id,
     };
 
-    // Fast path: if reaction already exists, do toggle/update
+    // Các phần logic xử lý bên dưới giữ nguyên...
     const existingReaction = await prisma.reaction.findUnique({
       where: { postId_userId: compoundWhere },
     });
 
     if (existingReaction) {
+      // So sánh chuỗi string bình thường
       if (existingReaction.type === type) {
-        // same reaction -> remove (toggle off)
         await prisma.reaction.delete({
           where: { postId_userId: compoundWhere },
         });
         return NextResponse.json({ message: "Reaction removed" }, { status: 200 });
       }
 
-      // different reaction -> update type
       const updated = await prisma.reaction.update({
         where: { postId_userId: compoundWhere },
         data: { type },
@@ -56,7 +59,6 @@ export async function POST(
       return NextResponse.json(updated, { status: 200 });
     }
 
-    // No existing reaction => try to create (may fail with P2002 under race)
     try {
       const created = await prisma.reaction.create({
         data: {
@@ -67,18 +69,15 @@ export async function POST(
       });
       return NextResponse.json(created, { status: 201 });
     } catch (err: any) {
-      // Handle race condition where another request created the reaction first
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2002"
       ) {
-        // re-fetch existing and apply same toggle/update logic
         const existingAfterRace = await prisma.reaction.findUnique({
           where: { postId_userId: compoundWhere },
         });
 
         if (!existingAfterRace) {
-          // unexpected: constraint failed but then not found — return conflict
           return NextResponse.json(
             { error: "Conflict creating reaction" },
             { status: 409 }
@@ -98,8 +97,6 @@ export async function POST(
           return NextResponse.json(updated, { status: 200 });
         }
       }
-
-      // unknown prisma error -> rethrow to outer catch
       throw err;
     }
   } catch (error) {

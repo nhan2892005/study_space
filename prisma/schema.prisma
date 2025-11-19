@@ -1,510 +1,377 @@
+// 1. Cấu hình Generator và Datasource
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
 
+// LƯU Ý: Đã xóa toàn bộ enum vì SQL Server không hỗ trợ Prisma Enum.
+// Thay vào đó, chúng ta dùng String.
+
+// 2. Định nghĩa Models
+
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          UserRole  @default(MENTEE)
-  department    String? // Khoa
-  major         String? // Chuyên ngành
-  year          Int? // Năm học (cho sinh viên)
-  bio           String? // Giới thiệu
-  achievements  String[] // Thành tích
+  id            String   @id @default(dbgenerated()) @db.VarChar(20)
+  name          String?  @db.NVarChar(100)
+  email         String   @unique @db.NVarChar(100)
+  accountStatus String?  @default("Active") @map("account_status") @db.NVarChar(20)
+  // Đổi Enum thành String
+  userType      String   @default("MENTEE") @map("user_type") @db.VarChar(10) 
+  department    String?  @db.NVarChar(100)
+  major         String?  @db.NVarChar(100)
+  createdAt     DateTime @default(now()) @db.DateTime2
+  updatedAt     DateTime @default(now()) @updatedAt @db.DateTime2
 
-  // Mentor specific fields
-  mentorProfile MentorProfile?
+  // Quan hệ
+  mentorProfile       MentorProfile?
+  menteeConnections   MenteeConnection[] @relation("MenteeRel")
+  mentorConnections   MenteeConnection[] @relation("MentorRel")
+  createdEvents       CalendarEvent[]    @relation("EventCreator")
+  eventAssignments    EventAssignment[]
+  notifications       Notification[]
+  progressRecords     ProgressRecord[]
+  reports             ReportsView[]
+  posts               Post[]
+  comments            Comment[]
+  reactions           Reaction[]
+  reviewsGiven        Review[]           @relation("ReviewerRel")
+  reviewsReceived     Review[]           @relation("MentorReviewRel")
+  feedbackGiven       MentorFeedback[]   @relation("FeedbackMentorRel")
+  feedbackReceived    MentorFeedback[]   @relation("FeedbackMenteeRel")
+  ownedServers        ChatServer[]
+  serverInvitations   ServerInvitation[] @relation("InvitedUser")
+  sentInvitations     ServerInvitation[] @relation("Inviter")
+  serverMemberships   ServerMember[]
+  messages            Message[]
+  chatConversations   ChatConversation[]
+  recordings          Recording[]
 
-  // Connection relationships
-  // As a mentee
-  menteeConnections MenteeConnection[] @relation("AsMentee")
-  // As a mentor
-  mentorConnections MenteeConnection[] @relation("AsMentor")
-
-  // Social features
-  posts     Post[]
-  comments  Comment[]
-  reactions Reaction[]
-
-  // Reviews (back-relations)
-  givenReviews    Review[] @relation("ReviewReviewer")
-  receivedReviews Review[] @relation("ReviewMentor")
-
-  // MentorFeedback (back-relations)
-  mentorFeedbacksAsMentor  MentorFeedback[] @relation("FeedbackByMentor")
-  mentorFeedbacksAsMentee  MentorFeedback[] @relation("FeedbackForMentee")
-
-  // Chat features
-  ownedServers    ChatServer[]   @relation("ServerOwner")
-  memberOfServers ServerMember[]
-  messages        Message[]
-  receivedInvitations ServerInvitation[] @relation("InvitedUser")
-  sentInvitations     ServerInvitation[] @relation("InvitedBy")
-
-  recordings Recording[]
-
-  // NEW: Calendar & Analytics features
-  createdEvents      CalendarEvent[] @relation("EventCreator")
-  assignedEvents     EventAssignment[]
-  notifications      Notification[]
-  progressRecords    ProgressRecord[]
-  analyticsViews     AnalyticsView[]
-
-  chatConversations ChatConversation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@map("User")
 }
 
 model MentorProfile {
-  id            String   @id @default(cuid())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String   @unique
-  rating        Float    @default(0)
-  totalReviews  Int      @default(0)
-  expertise     String[]
-  maxMentees    Int      @default(5)
-  availableDays String[]
+  id           String   @id @default(dbgenerated()) @db.VarChar(20)
+  userId       String   @unique @db.VarChar(20)
+  rating       Decimal  @default(0.00) @db.Decimal(3, 2)
+  totalReviews Int      @default(0)
+  createdAt    DateTime @default(now()) @db.DateTime2
+  updatedAt    DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chuyenMon ChuyenMon[]
+  lichTrong LichTrong[]
+}
+
+model ChuyenMon {
+  mentorId String @map("mentor_id") @db.VarChar(20)
+  bangCap  String @map("bang_cap") @db.NVarChar(255)
+
+  mentor MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@id([mentorId, bangCap])
+  @@map("ChuyenMon")
+}
+
+model LichTrong {
+  maLichTrong Int      @id @default(autoincrement()) @map("ma_lich_trong")
+  mentorId    String   @map("mentor_id") @db.VarChar(20)
+  ngay        DateTime @db.Date
+  gioBatDau   DateTime @map("gio_bat_dau") @db.Time
+  gioKetThuc  DateTime @map("gio_ket_thuc") @db.Time
+
+  mentor MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@map("LichTrong")
 }
 
 model MenteeConnection {
-  id       String           @id @default(cuid())
-  mentee   User             @relation("AsMentee", fields: [menteeId], references: [id])
-  menteeId String
-  mentor   User             @relation("AsMentor", fields: [mentorId], references: [id])
-  mentorId String
-  status   ConnectionStatus @default(PENDING)
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  menteeId  String   @db.VarChar(20)
+  mentorId  String   @db.VarChar(20)
+  // Đổi Enum thành String
+  status    String   @default("PENDING") @db.VarChar(20) 
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mentee User @relation("MenteeRel", fields: [menteeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mentor User @relation("MentorRel", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([menteeId, mentorId])
 }
 
-// NEW: Calendar Event System
 model CalendarEvent {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  startTime   DateTime
-  endTime     DateTime
-  type        EventType @default(PERSONAL)
-  priority    Priority  @default(MEDIUM)
-  location    String?
-  isCompleted Boolean   @default(false)
-  
-  creator     User      @relation("EventCreator", fields: [creatorId], references: [id])
-  creatorId   String
-  
+  id          String   @id @default(dbgenerated()) @db.VarChar(20)
+  title       String   @db.NVarChar(255)
+  description String?  @db.NVarChar(Max)
+  startTime   DateTime @db.DateTime2
+  endTime     DateTime @db.DateTime2
+  // Đổi Enum thành String
+  priority    String   @default("MEDIUM") @db.VarChar(20)
+  isCompleted Boolean  @default(false)
+  creatorId   String   @db.VarChar(20)
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime2
+
+  creator     User              @relation("EventCreator", fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   assignments EventAssignment[]
   reminders   EventReminder[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([creatorId])
-  @@index([startTime])
 }
 
 model EventAssignment {
-  id      String        @id @default(cuid())
-  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId String
-  user    User          @relation(fields: [userId], references: [id])
-  userId  String
-  status  EventStatus   @default(PENDING)
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  eventId   String   @db.VarChar(20)
+  userId    String   @db.VarChar(20)
+  // Đổi Enum thành String
+  status    String   @default("PENDING") @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  event    User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  calEvent CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
-  @@index([userId])
 }
 
 model EventReminder {
-  id            String        @id @default(cuid())
-  event         CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId       String
-  reminderTime  DateTime
-  message       String?
-  isActive      Boolean       @default(true)
+  id           String   @id @default(dbgenerated()) @db.VarChar(20)
+  eventId      String   @db.VarChar(20)
+  reminderTime DateTime @db.DateTime2
+  message      String?  @db.NVarChar(255)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.DateTime2
+  updatedAt    DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([eventId])
-  @@index([reminderTime])
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
-// NEW: Enhanced Notification System
 model Notification {
-  id       String           @id @default(cuid())
-  type     NotificationType
-  title    String
-  content  String
-  data     Json? // Additional data for different notification types
-  isRead   Boolean          @default(false)
-  
-  user     User             @relation(fields: [userId], references: [id])
-  userId   String
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  title     String   @db.NVarChar(255)
+  content   String   @db.NVarChar(Max)
+  isRead    Boolean  @default(false)
+  userId    String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, isRead])
-  @@index([createdAt])
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-// NEW: Progress Tracking System
 model ProgressRecord {
-  id          String      @id @default(cuid())
-  mentee      User        @relation(fields: [menteeId], references: [id])
-  menteeId    String
-  category    String      // e.g., "coding", "communication", "project_management"
-  subcategory String?     // e.g., "javascript", "presentation_skills"
-  score       Float       // 0-100 scale
-  maxScore    Float       @default(100)
-  notes       String?
-  attachments String[]    // URLs to files/screenshots
-  
-  // Metadata for tracking
-  recordedBy  String      // User ID of who recorded this (usually mentor)
-  recordType  RecordType  @default(MANUAL)
-  tags        String[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  menteeId  String   @db.VarChar(20)
+  score     Decimal  @db.Decimal(5, 2)
+  notes     String?  @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  @@index([menteeId])
-  @@index([category])
-  @@index([createdAt])
+  mentee User @relation(fields: [menteeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-// NEW: Analytics Views for Dashboard
-model AnalyticsView {
-  id         String        @id @default(cuid())
-  user       User          @relation(fields: [userId], references: [id])
-  userId     String
-  viewType   AnalyticsType
-  filters    Json? // Store filter configurations
-  chartType  String        // "line", "bar", "pie", "area", etc.
-  isDefault  Boolean       @default(false)
-  position   Int           @default(0) // For ordering in dashboard
+model ReportsView {
+  id          String   @id @default(dbgenerated()) @db.VarChar(20)
+  userId      String   @db.VarChar(20)
+  title       String   @db.NVarChar(255)
+  description String?  @db.NVarChar(1023)
+  visibility  String?  @default("Private") @db.NVarChar(20)
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-// Existing models remain the same...
 model Post {
-  id        String     @id @default(cuid())
-  content   String     @db.Text
-  images    String[]
-  published Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  author    User       @relation(fields: [authorId], references: [id])
-  authorId  String
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  content   String   @db.NVarChar(Max)
+  authorId  String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
+
+  author    User       @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  images    Images[]
   comments  Comment[]
   reactions Reaction[]
 }
 
+model Images {
+  id       String @id @default(dbgenerated()) @db.VarChar(20)
+  postId   String @map("post_id") @db.VarChar(20)
+  imageUrl String @map("image_url") @db.NVarChar(255)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("Images")
+}
+
 model Comment {
-  id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    String
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  content   String   @db.NVarChar(Max)
+  postId    String   @db.VarChar(20)
+  authorId  String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Reaction {
-  id        String       @id @default(cuid())
-  type      ReactionType
-  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    String
-  user      User         @relation(fields: [userId], references: [id])
-  userId    String
-  createdAt DateTime     @default(now())
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  // Đổi Enum thành String
+  type      String   @db.VarChar(20)
+  postId    String   @db.VarChar(20)
+  userId    String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([postId, userId])
 }
 
 model Review {
-  id         String   @id @default(cuid())
-  reviewer   User     @relation("ReviewReviewer", fields: [reviewerId], references: [id])
-  reviewerId String
-  mentor     User     @relation("ReviewMentor", fields: [mentorId], references: [id])
-  mentorId   String
+  id         String   @id @default(dbgenerated()) @db.VarChar(20)
+  reviewerId String   @db.VarChar(20)
+  mentorId   String   @db.VarChar(20)
   rating     Int
-  comment    String?
-  createdAt  DateTime @default(now())
+  comment    String?  @db.NVarChar(Max)
+  createdAt  DateTime @default(now()) @db.DateTime2
 
-  @@index([mentorId])
+  reviewer User @relation("ReviewerRel", fields: [reviewerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mentor   User @relation("MentorReviewRel", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model MentorFeedback {
-  id        String   @id @default(cuid())
-  mentor    User     @relation("FeedbackByMentor", fields: [mentorId], references: [id])
-  mentorId  String
-  mentee    User     @relation("FeedbackForMentee", fields: [menteeId], references: [id])
-  menteeId  String
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  mentorId  String   @db.VarChar(20)
+  menteeId  String   @db.VarChar(20)
   score     Int?
-  comment   String?
-  createdAt DateTime @default(now())
+  comment   String?  @db.NVarChar(Max)
+  createdAt DateTime @default(now()) @db.DateTime2
 
-  @@index([mentorId])
-  @@index([menteeId])
+  mentor User @relation("FeedbackMentorRel", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mentee User @relation("FeedbackMenteeRel", fields: [menteeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-// Chat Models
 model ChatServer {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  image       String?
-  owner       User           @relation("ServerOwner", fields: [ownerId], references: [id])
-  ownerId     String
+  id          String   @id @default(dbgenerated()) @db.VarChar(20)
+  name        String   @db.NVarChar(100)
+  description String?  @db.NVarChar(Max)
+  image       String?  @db.NVarChar(500)
+  ownerId     String   @db.VarChar(20)
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime2
+
+  owner       User               @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  invitations ServerInvitation[]
   members     ServerMember[]
   channels    Channel[]
-  invitations ServerInvitation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model ServerInvitation {
-  id        String     @id @default(cuid())
-  server    ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  serverId  String
-  
-  invitedUser   User   @relation("InvitedUser", fields: [invitedUserId], references: [id])
-  invitedUserId String
-  
-  invitedBy   User   @relation("InvitedBy", fields: [invitedById], references: [id])
-  invitedById String
-  
-  status    InvitationStatus @default(PENDING)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id            String   @id @default(dbgenerated()) @db.VarChar(20)
+  serverId      String   @db.VarChar(20)
+  invitedUserId String   @db.VarChar(20)
+  invitedById   String   @db.VarChar(20)
+  // Đổi Enum thành String
+  status        String   @default("PENDING") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @db.DateTime2
+  updatedAt     DateTime @default(now()) @updatedAt @db.DateTime2
 
-  @@index([serverId])
-  @@index([invitedUserId])
+  server      ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  invitedUser User       @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inviter     User       @relation("Inviter", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@unique([serverId, invitedUserId])
 }
 
 model ServerMember {
-  id       String     @id @default(cuid())
-  server   ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  serverId String
-  user     User       @relation(fields: [userId], references: [id])
-  userId   String
-  role     MemberRole @default(MEMBER)
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  serverId  String   @db.VarChar(20)
+  userId    String   @db.VarChar(20)
+  // Đổi Enum thành String
+  role      String   @default("MEMBER") @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  server ChatServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([serverId, userId])
 }
 
 model Channel {
-  id          String      @id @default(cuid())
-  name        String
-  type        ChannelType
-  description String?
-  server      ChatServer  @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  serverId    String
-  messages    Message[]
-  recordings  Recording[]
+  id          String   @id @default(dbgenerated()) @db.VarChar(20)
+  name        String   @db.NVarChar(100)
+  description String?  @db.NVarChar(Max)
+  serverId    String   @db.VarChar(20)
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  server     ChatServer  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  recordings Recording[]
 
   @@unique([serverId, name])
 }
 
 model Message {
-  id        String      @id @default(cuid())
-  content   String      @db.Text
-  type      MessageType @default(TEXT)
-  author    User        @relation(fields: [authorId], references: [id])
-  authorId  String
-  channel   Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId String
-  files     File[]
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  content   String?  @db.NVarChar(Max)
+  authorId  String   @db.VarChar(20)
+  channelId String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author  User   @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  files   File[]
 }
 
 model File {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  type      FileType
-  size      Int
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  messageId String
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  name      String   @db.NVarChar(255)
+  url       String   @db.NVarChar(500)
+  size      BigInt
+  messageId String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("File")
 }
 
 model ChatConversation {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?
-  messages  ChatMessage[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String   @id @default(dbgenerated()) @db.VarChar(20)
+  userId    String   @db.VarChar(20)
+  title     String?  @db.NVarChar(255)
+  createdAt DateTime @default(now()) @db.DateTime2
+  updatedAt DateTime @default(now()) @updatedAt @db.DateTime2
 
-  @@index([userId])
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
 }
 
 model ChatMessage {
-  id             String           @id @default(cuid())
-  conversationId String
-  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           String           // 'user' | 'assistant' | 'system'
-  content        String           @db.Text
-  createdAt      DateTime         @default(now())
+  id             String   @id @default(dbgenerated()) @db.VarChar(20)
+  conversationId String   @db.VarChar(20)
+  content        String   @db.NVarChar(Max)
+  createdAt      DateTime @default(now()) @db.DateTime2
 
-  @@index([conversationId])
-  @@index([createdAt])
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }
 
 model Recording {
-  id          String  @id @default(cuid())
-  title       String
-  description String?
-  url         String
+  id          String   @id @default(dbgenerated()) @db.VarChar(20)
+  description String?  @db.NVarChar(Max)
   duration    Int
-  thumbnail   String?
-  channel     Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId   String
-  recorder    User    @relation(fields: [recorderId], references: [id])
-  recorderId  String
+  channelId   String   @db.VarChar(20)
+  recorderId  String   @db.VarChar(20)
+  createdAt   DateTime @default(now()) @db.DateTime2
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime2
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// NEW ENUMS
-enum EventType {
-  PERSONAL
-  DEADLINE
-  MEETING
-  ASSIGNMENT
-  REMINDER
-  CLASS
-  EXAM
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum EventStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  COMPLETED
-}
-
-enum NotificationType {
-  SERVER_INVITATION
-  MENTEE_REQUEST
-  EVENT_ASSIGNMENT
-  EVENT_REMINDER
-  PROGRESS_UPDATE
-  SYSTEM_ANNOUNCEMENT
-  REVIEW_REMINDER
-}
-
-enum RecordType {
-  MANUAL
-  AUTOMATIC
-  PEER_REVIEW
-  SELF_ASSESSMENT
-}
-
-enum AnalyticsType {
-  PROGRESS_OVERVIEW
-  CATEGORY_BREAKDOWN
-  TIME_SERIES
-  COMPARISON
-  MENTEE_STATISTICS
-  MENTOR_STATISTICS
-  SYSTEM_OVERVIEW
-}
-
-// EXISTING ENUMS
-enum MessageType {
-  TEXT
-  FILE
-  SYSTEM
-}
-
-enum FileType {
-  IMAGE
-  DOCUMENT
-  VIDEO
-  AUDIO
-}
-
-enum UserRole {
-  ADMIN
-  MENTOR
-  MENTEE
-}
-
-enum ConnectionStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
-enum ReactionType {
-  LIKE
-  HEART
-  HAHA
-  SAD
-  CONGRATS
-}
-
-enum MemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-}
-
-enum ChannelType {
-  TEXT
-  VOICE
-  VIDEO
-  STREAMING
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
+  channel  Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  recorder User    @relation(fields: [recorderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }

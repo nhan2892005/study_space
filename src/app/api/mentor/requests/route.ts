@@ -11,7 +11,7 @@ export async function GET() {
   if (!mentor) return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
 
   // Find pending connections where mentorId = mentor.id
-  const requests = await prisma.menteeConnection.findMany({ where: { mentorId: mentor.id, status: 'PENDING' }, include: { mentee: { select: { id: true, name: true, email: true, image: true } } } });
+  const requests = await prisma.menteeConnection.findMany({ where: { mentorId: mentor.id, status: 'PENDING' }, include: { mentee: { select: { id: true, name: true, email: true } } } });
 
   return NextResponse.json({ requests });
 }

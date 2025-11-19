@@ -34,7 +34,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
         author: {
           select: {
             name: true,
-            image: true,
           },
         },
       },

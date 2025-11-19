@@ -37,7 +37,6 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        type: true,
         description: true,
         createdAt: true,
         _count: {

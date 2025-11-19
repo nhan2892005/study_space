@@ -42,13 +42,25 @@ interface NewEvent {
   location: string;
 }
 
+interface DashboardStats {
+  completedTasksThisMonth: number;
+  totalTasksThisMonth: number;
+  totalCompletedTasks: number;
+  averageScore: number;
+  monthlyAverageScore: number;
+  completionRate: number;
+}
+
 const MenteeDashboard = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [progressData, setProgressData] = useState<ProgressData[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<RecentFeedback[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<any[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: '',
     description: '',
@@ -65,9 +77,14 @@ const MenteeDashboard = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/dashboard/mentee');
-        if (!res.ok) throw new Error(`Failed to fetch mentee dashboard: ${res.status}`);
-        const data = await res.json();
+        const [dashboardRes, timeSeriesRes, statsRes] = await Promise.all([
+          fetch('/api/dashboard/mentee'),
+          fetch('/api/dashboard/mentee/time-series'),
+          fetch('/api/dashboard/mentee/stats')
+        ]);
+        
+        if (!dashboardRes.ok) throw new Error(`Failed to fetch mentee dashboard: ${dashboardRes.status}`);
+        const data = await dashboardRes.json();
         if (!mounted) return;
 
         // Map progress records
@@ -101,6 +118,19 @@ const MenteeDashboard = () => {
         setProgressData(progress);
         setEvents(events);
         setRecentFeedback(feedback);
+
+        // Load time series data if available
+        if (timeSeriesRes.ok) {
+          const timeSeriesDataRes = await timeSeriesRes.json();
+          setTimeSeriesData(timeSeriesDataRes.timeSeriesData || []);
+        }
+
+        // Load stats
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData);
+        }
+
         // also fetch assigned tasks (created or assigned)
         try {
           const t = await fetch('/api/tasks');
@@ -197,15 +227,44 @@ const MenteeDashboard = () => {
     }
   };
 
-  const timeSeriesData = [
-    { month: 'T1', coding: 65, communication: 60, project: 55, problem: 62, teamwork: 70 },
-    { month: 'T2', coding: 68, communication: 62, project: 58, problem: 65, teamwork: 72 },
-    { month: 'T3', coding: 72, communication: 65, project: 60, problem: 68, teamwork: 74 },
-    { month: 'T4', coding: 75, communication: 67, project: 62, problem: 70, teamwork: 76 },
-    { month: 'T5', coding: 78, communication: 68, project: 65, problem: 70, teamwork: 75 },
-    { month: 'T6', coding: 82, communication: 70, project: 66, problem: 75, teamwork: 78 },
-    { month: 'T7', coding: 85, communication: 72, project: 68, problem: 78, teamwork: 80 },
-  ];
+  const handleToggleTaskCompletion = async (taskId: string, currentStatus: boolean) => {
+    try {
+      setCompletingTaskId(taskId);
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isCompleted: !currentStatus })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to update task');
+      }
+
+      const updatedTask = await res.json();
+      
+      // Update the events list
+      setEvents(events.map(e => 
+        e.id === taskId 
+          ? { ...e, isCompleted: !currentStatus }
+          : e
+      ));
+
+      // Refresh stats
+      const statsRes = await fetch('/api/dashboard/mentee/stats');
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
+
+      toast.success(!currentStatus ? 'Đánh dấu hoàn thành!' : 'Đánh dấu chưa hoàn thành!');
+    } catch (err: any) {
+      console.error('Error updating task:', err);
+      toast.error(err.message || 'Lỗi khi cập nhật task');
+    } finally {
+      setCompletingTaskId(null);
+    }
+  };
 
   const radarData = progressData.map(item => ({
     subject: item.category.replace(' ', '\n'),
@@ -266,8 +325,8 @@ const MenteeDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Điểm trung bình</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">76.6</p>
-                <p className="text-xs text-green-600 dark:text-green-400">+4.2 từ tháng trước</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.averageScore || 0}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Tháng này: {stats?.monthlyAverageScore || 0}</p>
               </div>
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -280,7 +339,7 @@ const MenteeDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Deadline sắp tới</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{events.filter(e => !e.isCompleted).length}</p>
-                <p className="text-xs text-orange-600 dark:text-orange-400">2 trong tuần này</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Chưa hoàn thành</p>
               </div>
               <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-full">
                 <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
@@ -292,8 +351,8 @@ const MenteeDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Hoạt động hoàn thành</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">12</p>
-                <p className="text-xs text-green-600 dark:text-green-400">Tháng này</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.completedTasksThisMonth || 0}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">Tháng này: {stats?.completionRate || 0}%</p>
               </div>
               <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
                 <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -304,9 +363,9 @@ const MenteeDashboard = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Đánh giá gần đây</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">4.2</p>
-                <p className="text-xs text-green-600 dark:text-green-400">⭐ Xuất sắc</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tổng hoàn thành</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalCompletedTasks || 0}</p>
+                <p className="text-xs text-green-600 dark:text-green-400">⭐ Tất cả thời gian</p>
               </div>
               <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-full">
                 <Star className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -327,12 +386,18 @@ const MenteeDashboard = () => {
               </div>
               <div className="space-y-3">
                 {events.slice(0, 5).map((event) => (
-                  <div key={event.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
+                  <div key={event.id} className={`flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border-l-4 transition-all ${event.isCompleted ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-blue-500'}`}>
                     <div className="flex-shrink-0 mt-1">
-                      {typeIcons[event.type as keyof typeof typeIcons]}
+                      <input
+                        type="checkbox"
+                        checked={event.isCompleted}
+                        onChange={() => handleToggleTaskCompletion(event.id, event.isCompleted)}
+                        disabled={completingTaskId === event.id}
+                        className="w-4 h-4 rounded cursor-pointer"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className={`text-sm font-medium truncate ${event.isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                         {event.title}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -344,7 +409,7 @@ const MenteeDashboard = () => {
                         })}
                       </p>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityColors[event.priority as keyof typeof priorityColors]}`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${priorityColors[event.priority as keyof typeof priorityColors]}`}>
                       {event.priority}
                     </span>
                   </div>

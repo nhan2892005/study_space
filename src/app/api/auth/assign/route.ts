@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.upsert({
       where: { email: session.user.email },
-      update: { role: { set: role } },  // Sửa ở đây: Dùng { set: role } cho enum update
+      update: { userType: { set: role } },  // Sửa ở đây: Dùng { set: role } cho enum update
       create: {
         email: session.user.email,
         name: session.user.name ?? null,

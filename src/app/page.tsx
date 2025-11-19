@@ -8,9 +8,8 @@ import { authOptions } from "./api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import type { ExtendedPost } from "@/types/post";
 import RoleAssigner from '@/components/auth/RoleAssigner';
-// remove mockMentors import — we'll fetch top mentors from DB
 
-async function getPosts(page: number = 1, limit: number = 5) {
+async function getPosts(page: number = 1, limit: number = 10) {
   const skip = (page - 1) * limit;
   
   const [posts, total] = await Promise.all([
@@ -20,20 +19,21 @@ async function getPosts(page: number = 1, limit: number = 5) {
           select: {
             id: true,
             name: true,
-            image: true,
-            role: true
+            userType: true,
+            department: true 
           }
         },
+        images: true,
         comments: {
           include: {
             author: {
               select: {
                 id: true,
                 name: true,
-                image: true
               }
             }
-          }
+          },
+          orderBy: { createdAt: 'asc' } // Nên sắp xếp comment cũ trước
         },
         reactions: true
       },
@@ -44,8 +44,29 @@ async function getPosts(page: number = 1, limit: number = 5) {
     prisma.post.count()
   ]);
 
+  const formattedPosts = posts.map((post) => ({
+    ...post,
+    createdAt: post.createdAt.toISOString(),
+    updatedAt: post.updatedAt.toISOString(),
+    images: post.images.map((img) => img.imageUrl),
+    author: {
+      ...post.author,
+      image: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(post.author.name || 'User')}`, 
+      role: post.author.userType
+    },
+
+    comments: post.comments.map((comment) => ({
+      ...comment,
+      createdAt: comment.createdAt.toISOString(),
+      author: {
+        ...comment.author,
+        image: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(comment.author.name || 'User')}`
+      }
+    }))
+  }));
+
   return {
-    posts: posts as ExtendedPost[],
+    posts: formattedPosts as unknown as ExtendedPost[],
     pagination: {
       total,
       pages: Math.ceil(total / limit),
@@ -62,31 +83,46 @@ export default async function Home({
   const session = await getServerSession(authOptions);
   const userRole = session?.user?.role || 'guest';
   const page = Number(searchParams['page']) || 1;
-  const { posts, pagination } = await getPosts(page);
-  // Fetch top mentors from DB (by MentorProfile.rating)
+  const { posts, pagination } = await getPosts(page, 10);
+
   const mentorProfiles = await prisma.mentorProfile.findMany({
     orderBy: [{ rating: 'desc' }, { totalReviews: 'desc' }],
     take: 10,
-    include: { user: { select: { id: true, name: true, image: true, department: true, achievements: true, email: true } } }
+    include: { 
+      user: { 
+        select: { 
+          id: true, 
+          name: true, 
+          department: true, 
+          email: true 
+        } 
+      },
+      chuyenMon: true
+    }
   });
 
-  // For each mentor, compute current mentees count
+  // Map dữ liệu Mentors
   const mentors = await Promise.all(mentorProfiles.map(async (mp:any) => {
     const currentMentees = await prisma.menteeConnection.count({ where: { mentorId: mp.userId, status: 'ACCEPTED' } });
+    
+    // Lấy list bằng cấp từ bảng ChuyenMon
+    const skills = mp.chuyenMon ? mp.chuyenMon.map((cm: any) => cm.bangCap) : [];
+
     return {
       id: mp.userId,
       name: mp.user?.name || 'Unknown',
-      avatar: mp.user?.image || `https://api.dicebear.com/9.x/avataaars/png?seed=${mp.userId}`,
-      role: 'lecturer' as const, // map DB MENTOR role to display role; adjust if you have subtypes
+      // Tạo avatar giả vì DB không có cột image
+      avatar: `https://api.dicebear.com/9.x/avataaars/png?seed=${mp.userId}`,
+      role: 'lecturer' as const,
       year: undefined,
       department: mp.user?.department || 'Unknown',
       currentMentees,
-      maxMentees: mp.maxMentees,
-      rating: mp.rating,
+      maxMentees: 10, // Hardcode hoặc thêm vào DB sau
+      rating: Number(mp.rating), // Convert Decimal to Number
       totalReviews: mp.totalReviews,
-      availableDays: Array.isArray(mp.availableDays) ? mp.availableDays.length : 0,
-      expertise: mp.expertise || [],
-      achievements: mp.user?.achievements || [],
+      availableDays: 3, // Mock data
+      expertise: skills, // Dùng dữ liệu thật từ bảng ChuyenMon
+      achievements: [], // DB chưa có bảng achievements, để mảng rỗng
       contact: { email: mp.user?.email || '' },
       schedule: [],
     };
@@ -99,7 +135,7 @@ export default async function Home({
         {/* GRID: 1 col on mobile, 4 cols on lg */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* left spacer (can put nav/ads later) */}
+          {/* left spacer */}
           <div className="hidden lg:block" />
 
           {/* Feed: takes 2 middle columns */}
@@ -129,7 +165,7 @@ export default async function Home({
             </div>
           </section>
 
-          {/* Right sidebar: Recommended mentors (sticky on large screens) */}
+          {/* Right sidebar: Recommended mentors */}
           <aside className="lg:col-span-1">
             {userRole.toString().toLowerCase() === 'mentee' && (
               <div className="relative">

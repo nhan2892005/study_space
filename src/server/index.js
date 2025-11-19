@@ -486,7 +486,7 @@ io.on('connection', async (socket) => {
       });
 
       if (!membership) {
-        socket.emit('error', { message: 'Not authorized to join this channel' });
+        socket.emit('error', { message: `Not authorized ${socket.userId} to join this channel in ${serverId}` });
         return;
       }
 

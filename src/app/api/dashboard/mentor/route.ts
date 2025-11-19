@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            image: true,
             email: true,
             updatedAt: true,
             progressRecords: {

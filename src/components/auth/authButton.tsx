@@ -118,7 +118,7 @@ export default function AuthButtons() {
                   } group flex w-full items-center rounded-md px-2 py-2 text-sm gap-2`}
                 >
                   <Image 
-                    src="/icons/logout.svg"
+                    src="https://api.dicebear.com/9.x/icons/svg?seed=signout"
                     alt="Sign out"
                     width={16}
                     height={16}

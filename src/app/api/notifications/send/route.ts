@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
     // Check if user is MENTOR
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true }
+      select: { userType: true }
     });
 
-    if (!user || user.role !== 'MENTOR') {
+    if (!user || user.userType !== 'MENTOR') {
       return NextResponse.json(
         { error: 'Only mentors can send notifications' },
         { status: 403 }
@@ -92,13 +92,12 @@ export async function POST(request: NextRequest) {
       recipientIds.map(recipientId =>
         prisma.notification.create({
           data: {
-            type: type as 'event' | 'announcement' | 'reminder',
             title,
             content,
-            data: {
-              sentBy: session.user.id,
-              mentorName: session.user.name || 'Your Mentor'
-            },
+            // data: {
+            //   sentBy: session.user.id,
+            //   mentorName: session.user.name || 'Your Mentor'
+            // },
             userId: recipientId,
             isRead: false,
             // Only set createdAt to the scheduled time if provided and valid

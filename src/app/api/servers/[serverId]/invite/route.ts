@@ -78,11 +78,11 @@ export async function POST(
       data: {
         server: { connect: { id: serverId } },
         invitedUser: { connect: { id: invitedUser.id } },
-        invitedBy: { connect: { id: inviter.id } },
+        inviter: { connect: { id: inviter.id } },
       },
       include: {
         server: true,
-        invitedBy: {
+        inviter: {
           select: {
             name: true,
             email: true,

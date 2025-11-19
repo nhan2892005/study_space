@@ -3,7 +3,6 @@ import GoogleProvider from "next-auth/providers/google";
 import { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { createToken } from '@/lib/jwt';
-import { UserRole } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -38,11 +37,11 @@ export const authOptions: NextAuthOptions = {
 
       // Extract role from redirect URI if available
       let roleFromUrl: string | null = null;
-      console.log(account?.redirect_uri)
       if (account?.redirect_uri && typeof account.redirect_uri === 'string') {
         try {
           const url = new URL(account.redirect_uri);
           const role = url.searchParams.get("role");
+          // Kiểm tra role hợp lệ (dạng String)
           if (role === "MENTOR" || role === "MENTEE" || role === "ADMIN") {
             roleFromUrl = role;
           }
@@ -53,19 +52,21 @@ export const authOptions: NextAuthOptions = {
       
       try {
         // Tìm hoặc tạo user trong database
+        // FIX: Bỏ 'image', 'emailVerified' và đổi 'role' thành 'userType'
         const user = await prisma.user.upsert({
           where: { email: userEmail },
           update: {
             name: (profile as any)?.name || null,
-            image: (profile as any)?.picture || null,
-            emailVerified: new Date(),
+            // image: (profile as any)?.picture || null, // <-- XÓA VÌ DB KHÔNG CÓ
+            // emailVerified: new Date(), // <-- XÓA VÌ DB KHÔNG CÓ
           },
           create: {
             email: userEmail,
             name: (profile as any)?.name || null,
-            image: (profile as any)?.picture || null,
-            role: (roleFromUrl ?? "MENTEE") as UserRole,
-            emailVerified: new Date(),
+            // image: ... <-- XÓA
+            userType: (roleFromUrl ?? "MENTEE"), // <-- ĐỔI role THÀNH userType
+            // emailVerified: ... <-- XÓA
+            accountStatus: "Active",
           },
         });
 
@@ -78,24 +79,23 @@ export const authOptions: NextAuthOptions = {
     
     async jwt({ token, user }) {
       if (user) {
-        // On first sign in, add user info to token
         token.sub = user.id;
       }
       
       if (token.email) {
-        // Fetch user from database and add info to token
+        // Fetch user from database
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: { 
             id: true,
-            role: true,
+            userType: true, // <-- ĐỔI role THÀNH userType
             name: true,
             email: true
           }
         });
         
         if (dbUser) {
-          token.role = dbUser.role;
+          token.role = dbUser.userType; // Map userType từ DB vào token.role cho Frontend dùng
           token.sub = dbUser.id;
           token.name = dbUser.name;
           token.email = dbUser.email;
@@ -107,11 +107,9 @@ export const authOptions: NextAuthOptions = {
     
     async session({ session, token }) {
       if (session.user && token) {
-        // Add user info to session
         session.user.id = token.sub as string;
         session.user.role = token.role as string;
         
-        // Create JWT token for socket authentication
         if (token.email && token.sub) {
           const jwtToken = createToken({
             userId: token.sub as string,

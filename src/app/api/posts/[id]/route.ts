@@ -20,7 +20,6 @@ export async function GET(
         author: {
           select: {
             name: true,
-            image: true,
           },
         },
         comments: {
@@ -28,7 +27,6 @@ export async function GET(
             author: {
               select: {
                 name: true,
-                image: true,
               },
             },
           },
@@ -100,7 +98,7 @@ export async function PATCH(
       where: { id },
       data: { content },
       include: {
-        author: { select: { name: true, image: true } },
+        author: { select: { name: true } },
       },
     });
 
